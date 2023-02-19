@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tactfulness</title>
+    <script type="module" src="/main.js"></script>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <h1>tactfulness</h1>
+
+
+    <div id="preGameFrame">
+
+      <i>[ takt-fuhl-nis ] • noun</i>
+      <p style="margin-bottom: 60px;">the quality or skill of handling difficult or delicate situations without giving offense</p>
+
+      <h3>Join a room</h3>
+      
+      <input id="joinInput" autocomplete="off"/>
+      <button id="joinButton">Join</button>
+
+      <h3>Create a room</h3>
+      
+      <button id="callButton" class="important">Create</button>
+
+    </div>
+
+
+    <div class="banished" id="gameFrame">
+
+      <h3 id="segmentText">Segment</h3>
+      <p id="spotlightText">Spotlight text</p>
+
+      <div class="card banished" id="responseCard">
+        <p class="cardText">the guy who created the templates</p>
+        <p class="cardEmoji">📄</p>
+      </div>
+
+      <div class="banished" id="cardFrame">
+
+      </div>
+
+    </div>
+
+
+    <div class="banished" id="disconnectFrame">
+
+      <h3>Disconnected</h3>
+      <p>You were disconnected from the room</p>
+
+      <button id="dismissButton">Dismiss</button>
+
+    </div>
+
+
+    <audio id="outputAudio"></audio>
+    
+
+    <div id="controlBar">
+
+      <button id="leaveButton" disabled="true">Leave</button>
+      <button id="muteButton" disabled="true">Mute</button>
+      <input id="nameInput" disabled="true" autocomplete="off"/>
+
+    </div>
+    
+  </body>
+</html>

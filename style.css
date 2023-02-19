@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sniglet:wght@400;800&display=swap');
+
+body {
+  font-family: 'Sniglet';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #CAB6B8;
+  background-color: #E2D5D7;
+  margin: 60px 20px;
+  font-size: 18px;
+  outline: none;
+}
+
+input {
+  font-family: 'Sniglet';
+  font-size: 15px;
+  color: #CAB6B8;
+  text-align: center;
+  text-overflow: ellipsis;
+  height: 30px;
+  width: 120px;
+  padding: 5px 20px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 30px;
+  background: #E2D5D7;
+  box-shadow: inset 5px 5px 10px #c0b5b7,
+              inset -5px -5px 10px #fff5f7;
+  box-sizing: content-box;
+}
+
+button {
+  font-family: 'Sniglet';
+  font-size: 15px;
+  color: #CAB6B8;
+  height: 30px;
+  width: 60px;
+  padding: 5px 5px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 30px;
+  background-color: #E2D5D7;
+  box-shadow: 5px 5px 10px #c0b5b7,
+             -5px -5px 10px #fff5f7;
+  box-sizing: content-box;
+}
+
+button.important {
+  color: #83A294;
+  height: 30px;
+  width: 225px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background-color: #9EC4B3;
+  box-shadow: 5px 5px 10px #c0b5b7,
+             -5px -5px 10px #fff5f7;
+}
+
+* {
+  transition-duration: 0.5s;
+  transition-property: all;
+  pointer-events: all;
+}
+
+*:focus {
+  outline: none;
+}
+
+:disabled {
+  opacity: 0.4;
+}
+
+:disabled:hover {
+  color: #CAB6B8;
+  background-color: #E2D5D7;
+}
+
+button:hover {
+  color: #E2D5D7;
+  background-color: #D6C6C8;
+}
+
+button.important:hover {
+  color: #9EC4B3;
+  background-color: #90B2A3;
+}
+
+.selected {
+  color: #E2D5D7;
+  background-color: #CAB6B8;
+}
+
+.banished {
+  opacity: 0;
+  pointer-events: none;
+}
+
+p {
+  font-size: 18px;
+}
+
+h1 {
+  font-weight: 800;
+  font-size: 50px;
+  margin: 10px;
+}
+
+h2, h3 {
+  font-weight: 400;
+}
+
+video {
+  width: 40vw;
+  height: 30vw;
+  margin: 2rem;
+  background: #eeeeee;
+}
+
+.videos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#controlBar {
+  position: absolute;
+  bottom: 0;
+  color: #CAB6B8;
+  height: 40px;
+  padding: 5px 5px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 30px;
+  background-color: #E2D5D7;
+  box-shadow: 5px 5px 10px #c0b5b7,
+             -5px -5px 10px #fff5f7;
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#preGameFrame {
+  position: absolute;
+  top: 123.4px;
+  left: 10%;
+  right: 10%;
+  bottom: 60px;
+  padding: 5px 5px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 30px;
+  box-sizing: content-box;
+  align-items: center;
+  justify-content: center;
+}
+
+#preGameFrame.banished * {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#gameFrame {
+  position: absolute;
+  top: 123.4px;
+  left: 10%;
+  right: 10%;
+  bottom: 60px;
+  padding: 5px 5px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 30px;
+  box-sizing: content-box;
+  align-items: center;
+  justify-content: center;
+}
+
+#gameFrame.banished * {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#disconnectFrame {
+  position: absolute;
+  top: 123.4px;
+  left: 10%;
+  right: 10%;
+  bottom: 60px;
+  padding: 5px 5px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 30px;
+  box-sizing: content-box;
+  align-items: center;
+  justify-content: center;
+}
+
+#disconnectFrame.banished * {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#cardFrame {
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#cardFrame.banished * {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card {
+  width: 200px;
+  height: 250px;
+  margin: auto;
+  margin-top: 10px;
+  border-style: solid;
+  border-width: 5px;
+  border-color: #444444;
+  border-radius: 20px;
+  background-color: #EEEEEE;
+  box-shadow: 5px 5px 10px #444444,
+             -5px -5px 10px #EEEEEE;
+}
+
+.card:not([id="responseCard"]):hover {
+  background-color: #E2D5D7;
+  box-shadow: 5px 5px 10px #EEEEEE,
+             -5px -5px 10px #EEEEEE;
+}
+
+.card p {
+  pointer-events: none;
+}
+
+.cardText {
+  text-align: left;
+  margin: 12px;
+  margin-right: 0px;
+  float: left;
+  width: 140px;
+  color: #444444;
+  font-weight: 400;
+  font-size: 20px;
+}
+
+.cardEmoji {
+  width: 30px;
+  height: 30px;
+  margin: 12px;
+  margin-left: 6px;
+  float: right;
+  color: #444444;
+}
