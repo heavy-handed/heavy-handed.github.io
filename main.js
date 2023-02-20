@@ -1,5 +1,5 @@
-import firebase from 'firebase/app';
-import 'firebase/firestore';
+import * as firebase from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+import * as firestore from 'https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js'
 
 const firebaseConfig = {
   apiKey: "AIzaSyBJogGCKQFmy36HfQeHnxgr7sL930E6GFk",
@@ -11,10 +11,13 @@ const firebaseConfig = {
   appId: "1:347855657762:web:e5845d10d138e42401637b"
 };
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+if (!firebase._apps.length) {
+  let app = firebase.initializeApp(firebaseConfig);
+
+  var db = firestore.getFirestore(app)
 }
-const firestore = firebase.firestore();
+
+//const firestore = firebase.firestore()
 
 const servers = {
   iceServers: [
@@ -38,7 +41,7 @@ let callId = null;
 
 let gameStateChannel = null;
 
-function createId() { return Math.floor(Math.random() * 1000000) }
+function createId() { return Math.floor(Math.random() * 61439 + 4096).toString(16).toUpperCase() }
 
 let playerConnections = {}
 
@@ -235,9 +238,9 @@ callButton.onclick = async () => {
             type: offerDescription.type,
           };
 
-          const callDoc = firestore.collection('calls').doc(callId);
+          const callDoc = await firestore.doc(db, "calls", callId)
       
-          await callDoc.set({ offer });
+          await firestore.setDoc(callDoc, { offer });
           
           // disabled the following because each event has an ongoing trigger, seen line 203 and below
 
@@ -283,12 +286,14 @@ callButton.onclick = async () => {
   
   
   // Reference Firestore collections for signaling
-  const callDoc = firestore.collection('calls').doc();
-  const offerCandidates = callDoc.collection('offerCandidates');
-  const answerCandidates = callDoc.collection('answerCandidates');
 
-  callId = callDoc.id
+  callId = Math.floor(Math.random() * 61439 + 4096).toString(16).toUpperCase()
   joinInput.value = callId
+  
+  const callDoc = firestore.doc(db, 'calls', callId)
+  await firestore.setDoc(callDoc, {})
+  const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
+  const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
 
   segmentText.innerText = 'Lobby'
   spotlightText.innerText = 'Your room code is ' + callId
@@ -300,7 +305,7 @@ callButton.onclick = async () => {
 
   // Get candidates for caller, save to db
   pc.onicecandidate = (event) => {
-    event.candidate && offerCandidates.add(event.candidate.toJSON());
+    event.candidate && firestore.addDoc(offerCandidates, event.candidate.toJSON());
   };
 
   // Create offer
@@ -312,10 +317,10 @@ callButton.onclick = async () => {
     type: offerDescription.type,
   };
 
-  await callDoc.set({ offer });
+  await firestore.setDoc(callDoc, { offer });
 
   // Listen for remote answer
-  callDoc.onSnapshot((snapshot) => {
+  firestore.onSnapshot(callDoc, (snapshot) => {
     const data = snapshot.data();
     if (!pc.currentRemoteDescription && data?.answer) { // On answer
       const answerDescription = new RTCSessionDescription(data.answer);
@@ -324,7 +329,7 @@ callButton.onclick = async () => {
   });
 
   // When answered, add candidate to peer connection
-  answerCandidates.onSnapshot((snapshot) => {
+  firestore.onSnapshot(answerCandidates, (snapshot) => {
     snapshot.docChanges().forEach((change) => {
       if (change.type === 'added') {
         console.log('CreateCall resolve answer')
@@ -434,7 +439,7 @@ callButton.onclick = async () => {
             setTimeout(function() {
               
               gameState.currentRound.segment = 'Reveal'
-              gameState.currentRound.timeLeft = 4
+              gameState.currentRound.timeLeft = 6
               gameState.currentRound.player = player.name
 
               segmentText.innerText = 'Reveal'
@@ -455,7 +460,7 @@ callButton.onclick = async () => {
 
               gameStateChannel.send(JSON.stringify(gameState));
 
-            }, 4000 * keyIndex)
+            }, 6000 * keyIndex)
 
           })
           
@@ -495,7 +500,7 @@ callButton.onclick = async () => {
 
             }
 
-          }, 4000 * playerList.length)
+          }, 6000 * playerList.length)
 
         }, 8000)
 
@@ -512,7 +517,8 @@ callButton.onclick = async () => {
 joinButton.onclick = async () => {
 
   callId = joinInput.value;
-  const callDoc = firestore.collection('calls').doc(callId);
+
+  const callDoc = await firestore.doc(db, "calls", callId)
   
   if (callDoc != null) {
 
@@ -666,10 +672,10 @@ joinButton.onclick = async () => {
                     type: offerDescription.type,
                   };
               
-                  await callDoc.set({ offer });
+                  await firestore.setDoc(callDoc, { offer });
 
                   // Listen for remote answer
-                  callDoc.onSnapshot((snapshot) => {
+                  firestore.onSnapshot(callDoc, (snapshot) => {
                     const data = snapshot.data();
                     if (!pc.currentRemoteDescription && data?.answer) { // On answer
                       const answerDescription = new RTCSessionDescription(data.answer);
@@ -678,7 +684,7 @@ joinButton.onclick = async () => {
                   });
 
                   // When answered, add candidate to peer connection
-                  answerCandidates.onSnapshot((snapshot) => {
+                  firestore.onSnapshot(answerCandidates, (snapshot) => {
                     snapshot.docChanges().forEach((change) => {
                       if (change.type === 'added') {
                         console.log('B resolve answer')
@@ -707,14 +713,14 @@ joinButton.onclick = async () => {
     // P A R T  2
 
 
-    const answerCandidates = callDoc.collection('answerCandidates');
-    const offerCandidates = callDoc.collection('offerCandidates');
+    const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
+    const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
 
     pc.onicecandidate = (event) => {
-      event.candidate && answerCandidates.add(event.candidate.toJSON());
+      event.candidate && firestore.addDoc(answerCandidates, event.candidate.toJSON());
     };
 
-    const callData = (await callDoc.get()).data();
+    const callData = (await firestore.getDoc(callDoc)).data();
 
     const offerDescription = callData.offer;
     await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
@@ -727,9 +733,9 @@ joinButton.onclick = async () => {
       sdp: answerDescription.sdp,
     };
 
-    await callDoc.update({ answer });
+    await firestore.updateDoc(callDoc, { answer });
 
-    offerCandidates.onSnapshot((snapshot) => {
+    firestore.onSnapshot(offerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           console.log('JoinGame respond to offer')
@@ -765,15 +771,15 @@ muteButton.onclick = async () => {
       voiceInput = pc.addTrack(track, localStream);
     });
 
-    const callDoc = firestore.collection('calls').doc(callId);
-    const answerCandidates = callDoc.collection('answerCandidates');
-    const offerCandidates = callDoc.collection('offerCandidates');
+    const callDoc = await firestore.doc(db, "calls", callId)
+    const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
+    const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
 
     pc.onicecandidate = (event) => {
-      event.candidate && answerCandidates.add(event.candidate.toJSON());
+      event.candidate && firestore.addDoc(answerCandidates, event.candidate.toJSON());
     };
 
-    const callData = (await callDoc.get()).data();
+    const callData = (await firestore.get(callDoc)).data();
 
     const offerDescription = callData.offer;
     await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
@@ -786,9 +792,9 @@ muteButton.onclick = async () => {
       sdp: answerDescription.sdp,
     };
 
-    await callDoc.update({ answer });
+    await firestore.updateDoc(callDoc, { answer });
 
-    offerCandidates.onSnapshot((snapshot) => {
+    firestore.onSnapshot(offerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           console.log('UnmuteButton respond to offer')
