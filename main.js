@@ -17,8 +17,6 @@ if (!firebase._apps.length) {
   var db = firestore.getFirestore(app)
 }
 
-//const firestore = firebase.firestore()
-
 const servers = {
   iceServers: [
     {
@@ -28,9 +26,6 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
-// Global State
-let pc = new RTCPeerConnection(servers);
-
 let localStream = null
 // https://blog.mozilla.org/webrtc/perfect-negotiation-in-webrtc/
 
@@ -39,11 +34,56 @@ let voiceOutput = null;
 
 let callId = null;
 
-let gameStateChannel = null;
+let peerConnections = {}
+let peerChannels = {}
 
-function createId() { return Math.floor(Math.random() * 61439 + 4096).toString(16).toUpperCase() }
+function sendToPeers(data) {
 
-let playerConnections = {}
+  let parsedData = data
+
+  Object.keys(peerChannels).forEach((peerId) => {
+
+    if (peerChannels[peerId] == undefined || peerChannels[peerId].readyState != 'open') {
+      let peerIndex = Object.keys(peerChannels).indexOf(peerId)
+
+      peerConnections[peerId].close()
+  
+      delete peerConnections[peerId]
+      delete peerChannels[peerId]
+      delete gameState.players[peerId]
+
+      playerBar.children[peerIndex + 1].remove()
+
+      if (parsedData.players) {
+        delete parsedData.players[peerId]
+        console.log('si 0.5')
+      }
+    }
+  })
+
+  Object.keys(peerChannels).forEach((peerId) => {
+    if (peerChannels[peerId] && peerChannels[peerId].readyState == 'open') {
+      peerChannels[peerId].send(JSON.stringify(parsedData))
+    }
+  })
+
+}
+
+function disconnectPeers() {
+  Object.keys(peerChannels).forEach((peerId) => {
+    let peerIndex = Object.keys(peerChannels).indexOf(peerId)
+    
+    peerConnections[peerId].close()
+
+    delete peerConnections[peerId]
+    delete peerChannels[peerId]
+    delete gameState.players[peerId]
+
+    playerBar.children[peerIndex].remove()
+  })
+}
+
+function wakeObject(object) { return JSON.parse(JSON.stringify(object)) }
 
 const initialGameState = {
   currentRound: {
@@ -54,15 +94,19 @@ const initialGameState = {
     player: ''
   },
   players: {},
-  numPlayers: 2,
+  //numPlayers: 2,
 };
 
 let gameState = initialGameState
+
+var myId = null
 
 // HTML elements
 const callButton = document.getElementById('callButton');
 const joinInput = document.getElementById('joinInput');
 const joinButton = document.getElementById('joinButton');
+const readyButton = document.getElementById('readyButton');
+
 const outputAudio = document.getElementById('outputAudio');
 
 const segmentText = document.getElementById('segmentText');
@@ -78,6 +122,8 @@ const dismissButton = document.getElementById('dismissButton')
 const responseCard = document.getElementById('responseCard');
 const responseText = responseCard.children[0];
 const responseEmoji = responseCard.children[1];
+
+const playerBar = document.getElementById('playerBar')
 
 const leaveButton = document.getElementById('leaveButton');
 const muteButton = document.getElementById('muteButton');
@@ -119,9 +165,9 @@ const prompts = {
   }
 }
 
-const responses = {
-  'pride': {
-    'emoji': '🏳‍🌈',
+const responses = [
+  {
+    'emoji': '🏳️‍🌈',
     'responses': [
       'gay',
       'a fairy, skittle, special snowflake',
@@ -146,220 +192,170 @@ const responses = {
       'a big fan of compulsory homosexuality',
       'livin\' life queer',
       'banging men',
-      'learning theatre',
+      'attending drama classes',
       'a drag queen'
     ]
+  },
+  {
+    'emoji': '🤓',
+    'responses': [
+      'factorising the polynomial',
+      'the next Einstein',
+      'pursuing a career in quantum physics',
+      'reciting pi to at least three digits',
+      'radiating nerd emoji',
+      'mentally gifted',
+      'paying off my college debt',
+      'studying some social skills',
+      'a sweaty nerd',
+      'the Kowalski of the class',
+      'calculating the probability that you\'re a nerd',
+      'asking for extension questions',
+      'a product of the private education system',
+      'the Dweeb of the Year',
+      'focusing on math and music, nothing else matters',
+      'a virgin',
+      'a brainiac',
+      'selling cheat-sheets, 50 cents a pop',
+      'doing homework',
+      'Stephen Hawking',
+      'a Nobel Prize winner',
+      'Mayor of Dorktopia',
+      'hanging out at the bully-free zone',
+      'schooling these other nerds to prove superiority',
+      'one of our greatest minds'
+    ]
+  },
+  {
+    'emoji': '🇬🇷',
+    'responses': [
+      'a malakia',
+      'spraying tzatziki everywhere',
+      'adding incest to the Olympics',
+      'Greece\'s debt collector',
+      'certified Greek, seven days a week',
+      'grillin\' and chillin\'',
+      'shouting \'Eureka\' and running nude down the street',
+      'the godfather of democracy',
+      'Plato',
+      'sailing to Athens',
+      'using calamari as a means of torture',
+      'bringing democracy to the people (only the male elite)',
+      'the owner of a construction company',
+      'a good-for-nothing wog',
+      'pretending that a bunch of little islands is a \'country\'',
+      'Hercules',
+      'doing the Macarena',
+      'more smoked than a souvla',
+      'strong Greek sperm',
+      'a matter of Greek mythology',
+      'penetrating Troy with a horse',
+      'better than the Turkish',
+      'an aspiring carpenter',
+      'down bad for a yiros right about now',
+      'daddy\'s little malaka'
+    ]
   }
-}
-
+]
 
 // 1. Setup media sources
 
 callButton.onclick = async () => {
 
+
+  // P A R T  1
+
+
+
   joinInput.setAttribute('disabled', true)
   joinButton.setAttribute('disabled', true)
   callButton.setAttribute('disabled', true)
+
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  let remoteStream = new MediaStream();
+
+  myId = 0
+
+  gameState.players[myId] = ({
+    id: myId,
+    name: 'Host',
+    ready: false,
+    muted: false,
+    responsePack: 0,
+    response: 0
+  })
+
+  // Reference Firestore collections for signaling
+
+  callId = Math.floor(Math.random() * 61439 + 4096).toString(16).toLowerCase()
+  joinInput.value = callId
+
+  navigator.clipboard.writeText(callId)
+  
+  let callDoc = firestore.doc(db, 'calls', callId)
+  await firestore.setDoc(callDoc, {})
+  let offerCandidates = firestore.collection(callDoc, 'offerCandidates');
+  let answerCandidates = firestore.collection(callDoc, 'answerCandidates');
+
+  segmentText.innerText = 'Lobby'
+  spotlightText.innerText = `Waiting for 4 players to join the game.
+Your room code is ` + callId + `.`
+
+  gameState.currentRound.segment = 'Lobby'
+  gameState.currentRound.spotlight = `Waiting for 4 players to join the game.
+Your room code is ` + callId + `.`
 
   leaveButton.removeAttribute('disabled')
   //muteButton.removeAttribute('disabled')
   nameInput.removeAttribute('disabled')
 
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  let remoteStream = new MediaStream();
-
-  // Push tracks from local stream to peer connection
-  localStream.getTracks().forEach((track) => {
-    voiceInput = pc.addTrack(track, localStream);
-  });
-
-  // Pull tracks from remote stream, add to video stream
-  pc.ontrack = (event) => {
-    console.log('pc.ontrack fired')
-    event.streams[0].getTracks().forEach((track) => {
-      voiceOutput = remoteStream.addTrack(track);
-    });
-  };
-
-  //outputAudio.srcObject = remoteStream;
-
-  var hostId = 0
-
-  gameState.players[hostId] = ({
-    id: hostId,
-    name: 'Host',
-    ready: false,
-    muted: false,
-    response: 0
+  Object.keys(playerBar.children).forEach((child) => {
+    playerBar.children[0].remove()
   })
 
-  // Create channel to send other (non-media) data
-  gameStateChannel = pc.createDataChannel('gameState', { id: 1 });
+  let newPlayerLabel = document.createElement('p')
+  newPlayerLabel.innerText = gameState.players[myId].name
 
-  gameStateChannel.onopen = (event) => {
-    gameStateChannel.send(JSON.stringify(gameState));
-  }
+  playerBar.appendChild(newPlayerLabel)
 
-  var playerId = createId()
-
-  playerConnections[createId()] = pc
-
-  gameState.players[playerId] = ({
-    id: playerId,
-    name: 'Player',
-    ready: false,
-    muted: false,
-    response: 0
-  })
-
-  gameStateChannel.onmessage = (event) => {
-
-    let parsedGameState = parseGameState(event.data, gameState, playerId)
-
-    gameStateChannel.send(JSON.stringify(parsedGameState));
-
-    console.log('GameState updated:')
-    console.log(parsedGameState)
-
-    if (gameState.players[playerId].muted) { // yes shane, this is correct
-      console.log('1a')
-
-      pc.onnegotiationneeded = async () => { // because this picks up a problem
-        console.log('3a')
-        if (gameState.players[playerId].muted) {
-
-          console.log('2a')
-
-          const offerDescription = await pc.createOffer();
-          await pc.setLocalDescription(offerDescription);
-      
-          const offer = {
-            sdp: offerDescription.sdp,
-            type: offerDescription.type,
-          };
-
-          const callDoc = await firestore.doc(db, "calls", callId)
-      
-          await firestore.setDoc(callDoc, { offer });
-          
-          // disabled the following because each event has an ongoing trigger, seen line 203 and below
-
-          // Listen for remote answer
-          /*callDoc.onSnapshot((snapshot) => {
-            const data = snapshot.data();
-            if (!pc.currentRemoteDescription && data?.answer) { // On answer
-              const answerDescription = new RTCSessionDescription(data.answer);
-              pc.setRemoteDescription(answerDescription);      
-            }
-          });*/
-
-          // When answered, add candidate to peer connection
-          /*answerCandidates.onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-              if (change.type === 'added') {
-                console.log('A resolve answer')
-
-                const candidate = new RTCIceCandidate(change.doc.data());
-                pc.addIceCandidate(candidate);
-
-              }
-            });
-          });*/
-
-        }
-      }
-
-    }
-
-    if (parsedGameState.players[playerId].ready && gameState.currentRound.segment == 'Lobby') {
-      
-      runGame()
-
-    }
-
-    gameState = parsedGameState
-
-  }
-  
-
-  // P A R T  2
-  
-  
-  // Reference Firestore collections for signaling
-
-  callId = Math.floor(Math.random() * 61439 + 4096).toString(16).toUpperCase()
-  joinInput.value = callId
-  
-  const callDoc = firestore.doc(db, 'calls', callId)
-  await firestore.setDoc(callDoc, {})
-  const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
-  const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
-
-  segmentText.innerText = 'Lobby'
-  spotlightText.innerText = 'Your room code is ' + callId
-
-  gameState.currentRound.segment = 'Lobby'
-  gameState.currentRound.spotlight = 'Your room code is ' + callId
-
-  navigator.clipboard.writeText(callId)
-
-  // Get candidates for caller, save to db
-  pc.onicecandidate = (event) => {
-    event.candidate && firestore.addDoc(offerCandidates, event.candidate.toJSON());
-  };
-
-  // Create offer
-  const offerDescription = await pc.createOffer();
-  await pc.setLocalDescription(offerDescription);
-
-  const offer = {
-    sdp: offerDescription.sdp,
-    type: offerDescription.type,
-  };
-
-  await firestore.setDoc(callDoc, { offer });
-
-  // Listen for remote answer
-  firestore.onSnapshot(callDoc, (snapshot) => {
-    const data = snapshot.data();
-    if (!pc.currentRemoteDescription && data?.answer) { // On answer
-      const answerDescription = new RTCSessionDescription(data.answer);
-      pc.setRemoteDescription(answerDescription);      
-    }
-  });
-
-  // When answered, add candidate to peer connection
-  firestore.onSnapshot(answerCandidates, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      if (change.type === 'added') {
-        console.log('CreateCall resolve answer')
-
-        const candidate = new RTCIceCandidate(change.doc.data());
-        pc.addIceCandidate(candidate);
-      }
-    });
-  });
+  playerBar.classList.remove('banished')
 
   preGameFrame.classList.add('banished')
 
   gameFrame.classList.remove('banished')
 
+
   function runGame() {
 
     let roundNum = 1
+    let promptsChosen = []
 
-    runRound()
+    readyButton.classList.remove('banished')
+
+    readyButton.onclick = async () => {
+      
+      readyButton.classList.add('banished')
+      runRound()
+      
+    }
 
     function runRound() {
 
       var promptId = Math.floor(Math.random() * (prompts.standard.prompts.length))
+
+      while (promptsChosen.find(element => element == promptId)) {
+         
+        promptId = Math.floor(Math.random() * (prompts.standard.prompts.length))
+
+      }
+
       var prompt = prompts.standard.prompts[promptId]
-      console.log(promptId)
+      promptsChosen.push(promptId)
 
       gameState.currentRound.segment = 'Prompt'
-      gameState.currentRound.spotlight = prompt
+      gameState.currentRound.spotlight = prompt + ' _____'
       gameState.currentRound.promptType = 'standard'
-      gameState.currentRound.timeLeft = 2
+      gameState.currentRound.timeLeft = 3
 
       
       segmentText.innerText = 'Prompt'
@@ -371,16 +367,17 @@ callButton.onclick = async () => {
           
       playerList.forEach(function(key, keyIndex) {
 
+        gameState.players[key].responsePack = 0
         gameState.players[key].response = 0
 
       })
 
-      gameStateChannel.send(JSON.stringify(gameState));
+      sendToPeers(gameState);
 
       setTimeout(function() {
 
         gameState.currentRound.segment = 'Response'
-        gameState.currentRound.timeLeft = 8
+        gameState.currentRound.timeLeft = 15
 
         segmentText.innerText = 'Response'
 
@@ -389,32 +386,33 @@ callButton.onclick = async () => {
         })
 
         let i = 1
-
-        let responseIds = []
+        let responsePackChosen = Math.floor(Math.random() * (responses.length))
+        let responsesChosen = []
 
         while (i <= 5) {
 
-          let responseId = Math.floor(Math.random() * (responses.pride.responses.length))
+          let responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
 
-          while (responseIds.find(element => element == responseId)) {
+          while (responsesChosen.find(element => element == responseId)) {
          
-            responseId = Math.floor(Math.random() * (responses.pride.responses.length))
+            responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
 
           }
 
-          responseIds.push(responseId)
+          responsesChosen.push(responseId)
           
-          const newCard = cardFrame.appendChild(responseCard.cloneNode(true))
+          let newCard = cardFrame.appendChild(responseCard.cloneNode(true))
           newCard.removeAttribute('id')
           newCard.classList.remove('banished')
-          newCard.children[0].innerText = responses.pride.responses[responseId]
-          newCard.children[1].innerText = responses.pride.emoji
+          newCard.children[0].innerText = responses[responsePackChosen].responses[responseId]
+          newCard.children[1].innerText = responses[responsePackChosen].emoji
+
+          twemoji.parse(newCard.children[1])
 
           newCard.onclick = async () => {
 
-            console.log(responseId + 1)
-
-            gameState.players[hostId].response = responseId + 1
+            gameState.players[myId].responsePack = responsePackChosen + 1
+            gameState.players[myId].response = responseId + 1
 
           }
 
@@ -426,7 +424,7 @@ callButton.onclick = async () => {
           cardFrame.classList.remove('banished')
         }, 0)
 
-        gameStateChannel.send(JSON.stringify(gameState));
+        sendToPeers(gameState);
 
         setTimeout(function() {
 
@@ -440,7 +438,7 @@ callButton.onclick = async () => {
               
               gameState.currentRound.segment = 'Reveal'
               gameState.currentRound.timeLeft = 6
-              gameState.currentRound.player = player.name
+              gameState.currentRound.player = player.id
 
               segmentText.innerText = 'Reveal'
 
@@ -448,17 +446,19 @@ callButton.onclick = async () => {
 
               responseCard.classList.remove('banished')
 
-              if (player.response == 0 || responses.pride.responses[player.response - 1] === undefined) {
-                gameState.currentRound.spotlight = 0
+              gameState.currentRound.spotlight = player.id
+
+              if (player.responsePack == 0 || responses[player.responsePack - 1] === undefined || player.response == 0 || responses[player.responsePack - 1].responses[player.response - 1] === undefined) {
                 responseText.innerText = player.name + ' gave no response'
                 responseEmoji.innerText = '📄'
               } else {
-                gameState.currentRound.spotlight = player.response
-                responseText.innerText = responses.pride.responses[player.response - 1]
-                responseEmoji.innerText = responses.pride.emoji
+                responseText.innerText = responses[player.responsePack - 1].responses[player.response - 1]
+                responseEmoji.innerText = responses[player.responsePack - 1].emoji
               }
 
-              gameStateChannel.send(JSON.stringify(gameState));
+              twemoji.parse(responseEmoji)
+
+              sendToPeers(gameState);
 
             }, 6000 * keyIndex)
 
@@ -478,20 +478,18 @@ callButton.onclick = async () => {
 
               gameState.currentRound.segment = 'Podium'
               gameState.currentRound.timeLeft = 5
-              gameState.currentRound.spotlight = 'Nobody wins, nobody loses...'
+              gameState.currentRound.spotlight = 'The real winner was friendship.'
 
               segmentText.innerText = 'Podium'
-              spotlightText.innerText = 'Nobody wins, nobody loses...'
+              spotlightText.innerText = 'The real winner was friendship.'
 
               // Announce winners or whatever
 
-              gameStateChannel.send(JSON.stringify(gameState));
+              sendToPeers(gameState);
 
               setTimeout(function() {
 
-                pc.close()
-
-                console.log('connection ended with grace :)')
+                disconnectPeers()
 
                 gameFrame.classList.add('banished')
                 disconnectFrame.classList.remove('banished')
@@ -502,21 +500,209 @@ callButton.onclick = async () => {
 
           }, 6000 * playerList.length)
 
-        }, 8000)
+        }, 15000)
 
-      }, 2000)
+        var timeLeft = 15
+
+        gameState.currentRound.timeLeft = timeLeft
+
+        segmentText.classList.add('i')
+        segmentText.innerText = gameState.currentRound.segment + ' • ' + timeLeft + 's'
+
+        var timer = setInterval(function() {
+
+          timeLeft--
+
+          if (timeLeft <= 0) {
+            clearInterval(timer)
+            
+            segmentText.classList.remove('i')
+          } else {
+            segmentText.innerText = gameState.currentRound.segment + ' • ' + timeLeft + 's'
+          }
+
+        }, 1000)
+
+      }, 3000)
     
     }
 
   }
 
 
+  // P A R T  2
+
+
+
+  async function newPeer() {
+
+    let newPc = new RTCPeerConnection(servers);
+
+    // Push tracks from local stream to peer connection
+    localStream.getTracks().forEach((track) => {
+      voiceInput = newPc.addTrack(track, localStream);
+    });
+
+    // Pull tracks from remote stream, add to video stream
+    newPc.ontrack = (event) => {
+      event.streams[0].getTracks().forEach((track) => {
+        voiceOutput = remoteStream.addTrack(track);
+      });
+    };
+
+    //outputAudio.srcObject = remoteStream;
+
+    // Create channel to send other (non-media) data
+
+    let playerId = Object.keys(gameState.players).length
+
+    let newChannel = newPc.createDataChannel(playerId);
+
+    newChannel.onopen = (event) => {
+      
+      peerConnections[playerId] = newPc
+      peerChannels[playerId] = newChannel
+
+      gameState.players[playerId] = ({
+        id: playerId,
+        name: 'Player ' + (playerId + 1),
+        ready: false,
+        muted: false,
+        responsePack: 0,
+        response: 0
+      })
+
+      if (Object.keys(gameState.players).length >= 4 && gameState.currentRound.segment == 'Lobby') {
+        
+        let newPlayerLabel = document.createElement('p')
+        newPlayerLabel.innerText = gameState.players[playerId].name
+
+        playerBar.appendChild(newPlayerLabel)
+        
+        runGame()
+        
+      } else if (gameState.currentRound.segment == 'Lobby') {
+
+        let newPlayerLabel = document.createElement('p')
+        newPlayerLabel.innerText = gameState.players[playerId].name
+
+        playerBar.appendChild(newPlayerLabel)
+        
+        newPeer()
+
+      }
+
+      sendToPeers(gameState);
+    }
+
+    newChannel.onmessage = (event) => {
+      
+      const parsedGameState = parseGameState(event.data, gameState, playerId)
+      
+      sendToPeers(parsedGameState);
+
+      if (gameState.players[playerId].muted) { // yes bro, this is correct
+
+        newPc.onnegotiationneeded = async () => { // because this picks up a problem
+
+          if (gameState.players[playerId].muted) {
+
+            let offerDescription = await newPc.createOffer();
+            await newPc.setLocalDescription(offerDescription);
+        
+            let offer = {
+              sdp: offerDescription.sdp,
+              type: offerDescription.type,
+            };
+
+            let callDoc = await firestore.doc(db, "calls", callId)
+        
+            await firestore.setDoc(callDoc, { offer });
+            
+            // disabled the following because each event has an ongoing trigger, seen line 203 and below
+
+            // Listen for remote answer
+            /*callDoc.onSnapshot((snapshot) => {
+              let data = snapshot.data();
+              if (!newPc.currentRemoteDescription && data?.answer) { // On answer
+                let answerDescription = new RTCSessionDescription(data.answer);
+                newPc.setRemoteDescription(answerDescription);
+              }
+            });*/
+
+            // When answered, add candidate to peer connection
+            /*answerCandidates.onSnapshot((snapshot) => {
+              snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                  let candidate = new RTCIceCandidate(change.doc.data());
+                  newPc.addIceCandidate(candidate);
+
+                }
+              });
+            });*/
+
+          }
+
+        }
+
+      }
+
+      gameState = parsedGameState
+
+    }
+
+    newChannel.onclosing = (event) => {
+      console.log('discon.')
+      sendToPeers(gameState)
+    }
+
+    // Get candidates for caller, save to db
+    newPc.onicecandidate = (event) => {
+      event.candidate && firestore.addDoc(offerCandidates, event.candidate.toJSON());
+    };
+
+    // Create offer
+    let offerDescription = await newPc.createOffer();
+    await newPc.setLocalDescription(offerDescription);
+
+    let offer = {
+      sdp: offerDescription.sdp,
+      type: offerDescription.type,
+    };
+
+    await firestore.setDoc(callDoc, { offer });
+
+    // Listen for remote answer
+    firestore.onSnapshot(callDoc, (snapshot) => {
+      let data = snapshot.data();
+      if (!newPc.currentRemoteDescription && data?.answer) { // On answer
+        let answerDescription = new RTCSessionDescription(data.answer);
+        newPc.setRemoteDescription(answerDescription);
+      }
+    });
+
+    // When answered, add candidate to peer connection
+    firestore.onSnapshot(answerCandidates, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          let candidate = new RTCIceCandidate(change.doc.data());
+          //newPc.addIceCandidate(candidate);
+        }
+      });
+    });
+
+  }
+
+  newPeer()
+
 };
+
+
 
 // 3. Answer the call with the unique ID
 joinButton.onclick = async () => {
 
-  callId = joinInput.value;
+  callId = joinInput.value.toLowerCase();
 
   const callDoc = await firestore.doc(db, "calls", callId)
   
@@ -526,22 +712,37 @@ joinButton.onclick = async () => {
     joinButton.setAttribute('disabled', true)
     callButton.setAttribute('disabled', true)
 
-    leaveButton.removeAttribute('disabled')
-    //muteButton.removeAttribute('disabled')
-    nameInput.removeAttribute('disabled')
-
-
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     let remoteStream = new MediaStream();
 
+
+
+    // P A R T  2
+
+
+
+    let newPc = new RTCPeerConnection(servers);
+
+    newPc.onconnectionstatechange = async () => {
+
+      if (newPc.connectionState == 'disconnected' || newPc.connectionState == 'failed') {
+  
+        newPc.close()
+  
+        gameFrame.classList.add('banished')
+        disconnectFrame.classList.remove('banished')
+  
+      }
+  
+    }
+
     // Push tracks from local stream to peer connection
     localStream.getTracks().forEach((track) => {
-      voiceInput = pc.addTrack(track, localStream);
+      voiceInput = newPc.addTrack(track, localStream);
     });
 
     // Pull tracks from remote stream, add to video stream
-    pc.ontrack = (event) => {
-      console.log('pc.ontrack fired')
+    newPc.ontrack = (event) => {
       event.streams[0].getTracks().forEach((track) => {
         voiceOutput = remoteStream.addTrack(track);
       });
@@ -551,182 +752,264 @@ joinButton.onclick = async () => {
 
 
     // Respond to new data channel
-    pc.ondatachannel = (event) => {
-      if (event.channel.id == 1) {
+    newPc.ondatachannel = (event) => {
+      
+      myId = (event.channel.label)
 
-        gameStateChannel = event.channel;
+      let hostChannel = event.channel
+      
+      event.channel.onopen = (event) => {
+        peerChannels[0] = hostChannel
+        peerConnections[0] = newPc
+        
+        sendToPeers({
+          ready: true
+        });
+      }
 
-        gameStateChannel.onopen = (event) => {
-          gameStateChannel.send(JSON.stringify({
-            ready: true
-          }));
+      hostChannel.onmessage = (event) => {
+        
+        let parsedGameState = JSON.parse(event.data)
+
+        if (!parsedGameState.players) {
+          
+          parsedGameState = parseGameState(event.data, gameState, 0)
+
         }
 
-        gameStateChannel.onmessage = (event) => {
+        let prevPlayers = Object.keys(gameState.players)
+        let newPlayers = Object.keys(parsedGameState.players)
+        
+        if (prevPlayers.length == 0) {
 
-          var parsedGameState = JSON.parse(event.data)
+          leaveButton.removeAttribute('disabled')
+          //muteButton.removeAttribute('disabled')
+          nameInput.removeAttribute('disabled')
 
-          if (!parsedGameState.players) {
-            console.log('must parse new message')
-            parsedGameState = parseGameState(event.data, gameState, 0)
+          Object.keys(playerBar.children).forEach((child) => {
+            playerBar.children[0].remove()
+          })
+          
+          newPlayers.forEach((player) => {
+            let newPlayerLabel = document.createElement('p')
+            newPlayerLabel.innerText = parsedGameState.players[player].name
+          
+            playerBar.appendChild(newPlayerLabel)
+          })
+        
+          playerBar.classList.remove('banished')
+      
+          preGameFrame.classList.add('banished')
+      
+          gameFrame.classList.remove('banished')
 
-          }
+        } else if (newPlayers.length > prevPlayers.length) {
 
-          console.log('GameState received:')
-          console.log(parsedGameState);
+          let newPlayerLabel = document.createElement('p')
+          newPlayerLabel.innerText = parsedGameState.players[newPlayers.length - 1].name
+
+          playerBar.appendChild(newPlayerLabel)
+          console.log('mal')
+          console.log(gameState)
+          console.log(parsedGameState)
+
+        } else if (newPlayers.length < prevPlayers.length) {
+          console.log('si')
+
+          prevPlayers.forEach(playerId => {
+
+            if (!parsedGameState.players[playerId]) {
+              let peerIndex = prevPlayers.indexOf(playerId)
+              console.log('muy bien')
+              playerBar.children[peerIndex].remove()
+            }
+
+          })
+
+        } else {
+
+          newPlayers.forEach(playerId => {
+
+            let peerIndex = newPlayers.indexOf(playerId)
+
+            playerBar.children[peerIndex].innerText = parsedGameState.players[playerId].name
+
+          })
+          
+        }
+
+        
+        if (parsedGameState.currentRound.segment == 'Reveal') {
 
           segmentText.innerText = parsedGameState.currentRound.segment
 
-          if (parsedGameState.currentRound.segment == 'Reveal') {
+          cardFrame.classList.add('banished')
 
-            cardFrame.classList.add('banished')
+          responseCard.classList.remove('banished')
 
-            responseCard.classList.remove('banished')
+          let player = parsedGameState.players[parsedGameState.currentRound.player]
 
-            if (parsedGameState.currentRound.spotlight == 0) {
-              responseText.innerText = parsedGameState.currentRound.player + ' gave no response'
-              responseEmoji.innerText = '📄'
-            } else {
-              responseText.innerText = responses.pride.responses[parsedGameState.currentRound.spotlight - 1]
-              responseEmoji.innerText = responses.pride.emoji
-            }
-
-          } else if (parsedGameState.currentRound.segment == 'Podium') {
-
-            responseCard.classList.add('banished')
-
-            spotlightText.innerText = parsedGameState.currentRound.spotlight
-
+          if (player.responsePack == 0 || responses[player.responsePack - 1] === undefined || player.response == 0 || responses[player.responsePack - 1].responses[player.response - 1] === undefined) {
+            responseText.innerText = player.name + ' gave no response'
+            responseEmoji.innerText = '📄'
           } else {
-
-            responseCard.classList.add('banished')
-
-            spotlightText.innerText = parsedGameState.currentRound.spotlight + ' _____'
-
+            responseText.innerText = responses[player.responsePack - 1].responses[player.response - 1]
+            responseEmoji.innerText = responses[player.responsePack - 1].emoji
           }
 
-          if (parsedGameState.currentRound.segment == 'Response' && gameState.currentRound.segment != 'Response') {
+          twemoji.parse(responseEmoji)
 
-            Object.keys(cardFrame.children).forEach((child) => {
-              cardFrame.children[0].remove()
-            })
+        } else if (parsedGameState.currentRound.segment == 'Podium') {
 
-            let i = 1
+          segmentText.innerText = parsedGameState.currentRound.segment
+          spotlightText.innerText = parsedGameState.currentRound.spotlight
 
-            let responseIds = []
+          responseCard.classList.add('banished')
 
-            while (i <= 5) {
+        } 
+        
+        if (parsedGameState.currentRound.segment == 'Lobby' || parsedGameState.currentRound.segment == 'Prompt') {
 
-              let responseId = Math.floor(Math.random() * (responses.pride.responses.length))
+          responseCard.classList.add('banished')
 
-              while (responseIds.find(element => element == responseId)) {
-            
-                responseId = Math.floor(Math.random() * (responses.pride.responses.length))
-
-              }
-
-              responseIds.push(responseId)
-              
-              const newCard = cardFrame.appendChild(responseCard.cloneNode(true))
-              newCard.removeAttribute('id')
-              newCard.classList.remove('banished')
-              newCard.children[0].innerText = responses.pride.responses[responseId]
-              newCard.children[1].innerText = responses.pride.emoji
-
-              newCard.onclick = async () => {
-
-                console.log(responseId + 1)
-
-                gameStateChannel.send(JSON.stringify({
-                  response: responseId + 1
-                }));
-
-              }
-
-              i++
-
-            }
-
-            setTimeout(function() {
-              cardFrame.classList.remove('banished')
-            }, 0)
-
-          }
-
-
-          if (gameState.players[0] != null) {
-            if (gameState.players[0].muted == true) {
-              console.log('1b')
-
-              pc.onnegotiationneeded = async () => {
-                console.log('3b')
-                if (gameState.players[0].muted == true) {
-                    
-                  console.log('2b')
-
-                  const offerDescription = await pc.createOffer();
-                  await pc.setLocalDescription(offerDescription);
-
-                  const offer = {
-                    sdp: offerDescription.sdp,
-                    type: offerDescription.type,
-                  };
-              
-                  await firestore.setDoc(callDoc, { offer });
-
-                  // Listen for remote answer
-                  firestore.onSnapshot(callDoc, (snapshot) => {
-                    const data = snapshot.data();
-                    if (!pc.currentRemoteDescription && data?.answer) { // On answer
-                      const answerDescription = new RTCSessionDescription(data.answer);
-                      pc.setRemoteDescription(answerDescription);      
-                    }
-                  });
-
-                  // When answered, add candidate to peer connection
-                  firestore.onSnapshot(answerCandidates, (snapshot) => {
-                    snapshot.docChanges().forEach((change) => {
-                      if (change.type === 'added') {
-                        console.log('B resolve answer')
-
-                        const candidate = new RTCIceCandidate(change.doc.data());
-                        pc.addIceCandidate(candidate);
-                      }
-                    });
-                  });
-
-                }
-
-              }
-
-            }
-          }
-
-          gameState = parsedGameState
+          segmentText.innerText = parsedGameState.currentRound.segment
+          spotlightText.innerText = parsedGameState.currentRound.spotlight
 
         }
 
+        if (parsedGameState.currentRound.segment == 'Response' && gameState.currentRound.segment != 'Response') {
+
+          var timeLeft = 15
+
+          segmentText.classList.add('i')
+          segmentText.innerText = parsedGameState.currentRound.segment + ' • ' + timeLeft + 's'
+          spotlightText.innerText = parsedGameState.currentRound.spotlight
+
+          var timer = setInterval(function() {
+
+            timeLeft--
+
+            if (timeLeft <= 0) {
+              clearInterval(timer)
+              
+              segmentText.classList.remove('i')
+            } else {
+              segmentText.innerText = parsedGameState.currentRound.segment + ' • ' + timeLeft + 's'
+            }
+
+          }, 1000)
+
+          Object.keys(cardFrame.children).forEach((child) => {
+            cardFrame.children[0].remove()
+          })
+
+          let i = 1
+          let responsePackChosen = Math.floor(Math.random() * (responses.length))
+          let responsesChosen = []
+
+          while (i <= 5) {
+
+            let responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
+  
+            while (responsesChosen.find(element => element == responseId)) {
+           
+              responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
+  
+            }
+  
+            responsesChosen.push(responseId)
+            
+            let newCard = cardFrame.appendChild(responseCard.cloneNode(true))
+            newCard.removeAttribute('id')
+            newCard.classList.remove('banished')
+            newCard.children[0].innerText = responses[responsePackChosen].responses[responseId]
+            newCard.children[1].innerText = responses[responsePackChosen].emoji
+
+            twemoji.parse(newCard)
+  
+            newCard.onclick = async () => {
+  
+              sendToPeers({
+                responsePack: responsePackChosen + 1,
+                response: responseId + 1
+              })
+  
+            }
+  
+            i++
+  
+          }
+
+          setTimeout(function() {
+            cardFrame.classList.remove('banished')
+          }, 0)
+
+        }
+
+
+        if (gameState.players[0] != null) {
+          if (gameState.players[0].muted == true) {
+
+            newPc.onnegotiationneeded = async () => {
+              
+              if (gameState.players[0].muted == true) {
+
+                const offerDescription = await newPc.createOffer();
+                await newPc.setLocalDescription(offerDescription);
+
+                const offer = {
+                  sdp: offerDescription.sdp,
+                  type: offerDescription.type,
+                };
+            
+                await firestore.setDoc(callDoc, { offer });
+
+                // Listen for remote answer
+                firestore.onSnapshot(callDoc, (snapshot) => {
+                  const data = snapshot.data();
+                  if (!newPc.currentRemoteDescription && data?.answer) { // On answer
+                    const answerDescription = new RTCSessionDescription(data.answer);
+                    newPc.setRemoteDescription(answerDescription);      
+                  }
+                });
+
+                // When answered, add candidate to peer connection
+                firestore.onSnapshot(answerCandidates, (snapshot) => {
+                  snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                      const candidate = new RTCIceCandidate(change.doc.data());
+                      newPc.addIceCandidate(candidate);
+                    }
+                  });
+                });
+
+              }
+
+            }
+
+          }
+        }
+
+        gameState = parsedGameState
+
       }
+
     }
-
-
-    // P A R T  2
-
 
     const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
     const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
 
-    pc.onicecandidate = (event) => {
+    newPc.onicecandidate = (event) => {
       event.candidate && firestore.addDoc(answerCandidates, event.candidate.toJSON());
     };
 
     const callData = (await firestore.getDoc(callDoc)).data();
 
     const offerDescription = callData.offer;
-    await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+    await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
 
-    const answerDescription = await pc.createAnswer();
-    await pc.setLocalDescription(answerDescription);
+    const answerDescription = await newPc.createAnswer();
+    await newPc.setLocalDescription(answerDescription);
 
     const answer = {
       type: answerDescription.type,
@@ -738,54 +1021,49 @@ joinButton.onclick = async () => {
     firestore.onSnapshot(offerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          console.log('JoinGame respond to offer')
-
           let data = change.doc.data();
-          pc.addIceCandidate(new RTCIceCandidate(data));
+          newPc.addIceCandidate(new RTCIceCandidate(data));
         }
       });
     });
-
-    preGameFrame.classList.add('banished')
-
-    gameFrame.classList.remove('banished')
 
   }
 
 };
 
 
-muteButton.onclick = async () => {
+
+muteButton.onclick = async () => { // newPc is not right, it's temporary considering mute function is disabled
 
   if (muteButton.classList.contains('selected')) {
 
     muteButton.classList.remove('selected')
     muteButton.innerText = 'Mute'
 
-    gameStateChannel.send(JSON.stringify({
+    sendToPeers({
       muted: false
-    }))
+    })
 
     // Push tracks from local stream to peer connection
     localStream.getTracks().forEach((track) => {
-      voiceInput = pc.addTrack(track, localStream);
+      voiceInput = newPc.addTrack(track, localStream);
     });
 
     const callDoc = await firestore.doc(db, "calls", callId)
     const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
     const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
 
-    pc.onicecandidate = (event) => {
+    newPc.onicecandidate = (event) => {
       event.candidate && firestore.addDoc(answerCandidates, event.candidate.toJSON());
     };
 
     const callData = (await firestore.get(callDoc)).data();
 
     const offerDescription = callData.offer;
-    await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+    await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
 
-    const answerDescription = await pc.createAnswer();
-    await pc.setLocalDescription(answerDescription);
+    const answerDescription = await newPc.createAnswer();
+    await newPc.setLocalDescription(answerDescription);
 
     const answer = {
       type: answerDescription.type,
@@ -797,10 +1075,8 @@ muteButton.onclick = async () => {
     firestore.onSnapshot(offerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          console.log('UnmuteButton respond to offer')
-
           let data = change.doc.data();
-          pc.addIceCandidate(new RTCIceCandidate(data));
+          //newPc.addIceCandidate(new RTCIceCandidate(data));  just uncomment this when the function is re-opened
         }
       });
     });
@@ -813,35 +1089,45 @@ muteButton.onclick = async () => {
     muteButton.classList.add('selected')
     muteButton.innerText = 'Unmute'
 
-    gameStateChannel.send(JSON.stringify({
+    sendToPeers({
       muted: true
-    }))
+    })
 
-    pc.removeTrack(voiceInput)
+    newPc.removeTrack(voiceInput)
 
   }
 
 }
 
-dismissButton.onclick = async () => {
 
-  pc = new RTCPeerConnection(servers);
 
-  pc.onconnectionstatechange = async () => {
-    console.log(pc.connectionState)
-  
-    if (pc.connectionState == 'disconnected') {
-  
-      pc.close()
-      
-      console.log('connection ended with grace :)')
-  
-      gameFrame.classList.add('banished')
-      disconnectFrame.classList.remove('banished')
-  
+nameInput.onkeyup = async (event) => {
+
+  if (event.key == 'Enter') {
+    if (myId == 0) {
+
+      gameState.players[myId].name = nameInput.value
+      playerBar.children[myId].innerText = nameInput.value
+
+      sendToPeers(gameState);
+
+    } else {
+
+      playerBar.children[myId].innerText = nameInput.value
+
+      sendToPeers({
+        name: nameInput.value
+      })
+
     }
-  
+
   }
+  
+}
+
+
+
+dismissButton.onclick = async () => {
 
   gameState = initialGameState
 
@@ -853,6 +1139,8 @@ dismissButton.onclick = async () => {
   joinButton.removeAttribute('disabled')
   callButton.removeAttribute('disabled')
 
+  playerBar.classList.add('banished')
+
   leaveButton.setAttribute('disabled', true)
   //muteButton.setAttribute('disabled', true)
   nameInput.setAttribute('disabled', true)
@@ -862,27 +1150,12 @@ dismissButton.onclick = async () => {
 }
 
 
-pc.onconnectionstatechange = async () => {
-  console.log(pc.connectionState)
-
-  if (pc.connectionState == 'disconnected' || pc.connectionState == 'failed') {
-
-    pc.close()
-    
-    console.log('connection ended with grace :)')
-
-    gameFrame.classList.add('banished')
-    disconnectFrame.classList.remove('banished')
-
-  }
-
-}
-
 
 function parseGameState(data, gameState, playerId) {
 
   var message = JSON.parse(data)
-  var parsedGameState = gameState
+
+  let parsedGameState = wakeObject(gameState)
   
   if (typeof(message.ready) == 'boolean') {
     
@@ -891,8 +1164,11 @@ function parseGameState(data, gameState, playerId) {
   }
 
   if (typeof(message.name) == 'string') {
+
+    let peerIndex = Object.keys(parsedGameState.players).indexOf('' + playerId + '')
     
     parsedGameState.players[playerId].name = message.name
+    playerBar.children[peerIndex].innerText = message.name
     
   }
 
@@ -902,8 +1178,7 @@ function parseGameState(data, gameState, playerId) {
 
     /*if (message.muted == true) {
 
-      pc.ontrack = (event) => {
-        console.log('pc.ontrack fired')
+      newPc.ontrack = (event) => {
         event.streams[0].getTracks().forEach((track) => {
           voiceOutput = remoteStream.addTrack(track);
         });
@@ -916,6 +1191,12 @@ function parseGameState(data, gameState, playerId) {
   if (typeof(message.response) == 'number' && gameState.currentRound.segment == 'Response') {
     
     parsedGameState.players[playerId].response = message.response
+    
+  }
+
+  if (typeof(message.responsePack) == 'number' && gameState.currentRound.segment == 'Response') {
+    
+    parsedGameState.players[playerId].responsePack = message.responsePack
     
   }
 

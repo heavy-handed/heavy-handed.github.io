@@ -6,17 +6,24 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #CAB6B8;
-  background-color: #E2D5D7;
-  margin: 60px 20px;
+  color: var(--pink-3);
+  background-color: var(--pink-1);
+  margin: 60px 15px;
   font-size: 18px;
   outline: none;
+
+  --green-3: #749a90;
+  --green-2: #90b5ab;
+  --green-1: #9fc4ba;
+  --pink-1: #f9b8be;
+  --pink-2: #f1a8af;
+  --pink-3: #d88c94;
 }
 
 input {
   font-family: 'Sniglet';
   font-size: 15px;
-  color: #CAB6B8;
+  color: var(--pink-3);
   text-align: center;
   text-overflow: ellipsis;
   height: 30px;
@@ -25,42 +32,43 @@ input {
   margin: 5px;
   border-width: 0px;
   border-radius: 30px;
-  background: #E2D5D7;
-  box-shadow: inset 5px 5px 10px #c0b5b7,
-              inset -5px -5px 10px #fff5f7;
+  background: var(--pink-1);
+  box-shadow: inset 5px 5px 10px #d49ca2,
+              inset -5px -5px 10px #ffd4db;
   box-sizing: content-box;
 }
 
 button {
   font-family: 'Sniglet';
   font-size: 15px;
-  color: #CAB6B8;
+  color: var(--pink-3);
   height: 30px;
   width: 60px;
   padding: 5px 5px;
   margin: 5px;
   border-width: 0px;
   border-radius: 30px;
-  background-color: #E2D5D7;
-  box-shadow: 5px 5px 10px #c0b5b7,
-             -5px -5px 10px #fff5f7;
+  background-color: var(--pink-1);
+  box-shadow: 5px 5px 10px #d49ca2,
+             -5px -5px 10px #ffd4db;
   box-sizing: content-box;
 }
 
 button.important {
-  color: #83A294;
+  color: var(--green-3);
   height: 30px;
   width: 225px;
   padding: 5px 10px;
   border-radius: 15px;
-  background-color: #9EC4B3;
-  box-shadow: 5px 5px 10px #c0b5b7,
-             -5px -5px 10px #fff5f7;
+  background-color: var(--green-1);
+  box-shadow: 5px 5px 10px #87a79e,
+             -5px -5px 10px #b7e1d6;
 }
 
 * {
   transition-duration: 0.5s;
   transition-property: all;
+  transition-timing-function: cubic-bezier(.25, .1, .25, 1);
   pointer-events: all;
 }
 
@@ -73,23 +81,28 @@ button.important {
 }
 
 :disabled:hover {
-  color: #CAB6B8;
-  background-color: #E2D5D7;
+  color: var(--pink-3);
+  background-color: var(--pink-1);
 }
 
 button:hover {
-  color: #E2D5D7;
-  background-color: #D6C6C8;
+  color: var(--pink-1);
+  background-color: var(--pink-2);
 }
 
 button.important:hover {
-  color: #9EC4B3;
-  background-color: #90B2A3;
+  color: var(--green-1);
+  background-color: var(--green-2);
 }
 
-.selected {
-  color: #E2D5D7;
-  background-color: #CAB6B8;
+button.selected {
+  color: var(--pink-1);
+  background-color: var(--pink-3);
+}
+
+button.important.selected {
+  color: var(--green-1);
+  background-color: var(--green-3);
 }
 
 .banished {
@@ -99,6 +112,13 @@ button.important:hover {
 
 p {
   font-size: 18px;
+}
+
+img.emoji {
+  height: 1em;
+  width: 1em;
+  margin: 0 .05em 0 .1em;
+  vertical-align: -0.1em;
 }
 
 h1 {
@@ -111,40 +131,57 @@ h2, h3 {
   font-weight: 400;
 }
 
-video {
-  width: 40vw;
-  height: 30vw;
-  margin: 2rem;
-  background: #eeeeee;
+.i {
+  margin: 0px;
+  transform: skewX(-15deg);
+  font-size: 18px;
 }
 
-.videos {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#controlBar {
+#infoPanel {
   position: absolute;
-  bottom: 0;
-  color: #CAB6B8;
+  display: flex;
+  flex-direction: column;
+  bottom: 10px;
+}
+
+#playerBar {
+  height: auto;
+  padding: 5px 5px;
+}
+
+.infoBar {
+  color: var(--pink-3);
   height: 40px;
   padding: 5px 5px;
-  margin: 5px;
+  margin: 10px;
   border-width: 0px;
   border-radius: 30px;
-  background-color: #E2D5D7;
-  box-shadow: 5px 5px 10px #c0b5b7,
-             -5px -5px 10px #fff5f7;
+  background-color: var(--pink-1);
+  box-shadow: 5px 5px 10px #d49ca2,
+             -5px -5px 10px #ffd4db;
   box-sizing: content-box;
-  display: flex;
+  display: table;
   align-items: center;
-  justify-content: center;
+  justify-content: left;
+}
+
+.infoBar p {
+  padding: 10px 15px;
+  margin: auto;
+  text-align: left;
+}
+
+#readyButton {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
 }
 
 #preGameFrame {
   position: absolute;
-  top: 123.4px;
+  top: 110px;
   left: 10%;
   right: 10%;
   bottom: 60px;
@@ -164,7 +201,7 @@ video {
 
 #gameFrame {
   position: absolute;
-  top: 123.4px;
+  top: 110px;
   left: 10%;
   right: 10%;
   bottom: 60px;
@@ -184,7 +221,7 @@ video {
 
 #disconnectFrame {
   position: absolute;
-  top: 123.4px;
+  top: 110px;
   left: 10%;
   right: 10%;
   bottom: 60px;
@@ -229,9 +266,9 @@ video {
 }
 
 .card:not([id="responseCard"]):hover {
-  background-color: #E2D5D7;
-  box-shadow: 5px 5px 10px #EEEEEE,
-             -5px -5px 10px #EEEEEE;
+  background-color: var(--pink-1);
+  box-shadow: 5px 5px 10px #d49ca2,
+             -5px -5px 10px #ffd4db;
 }
 
 .card p {

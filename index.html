@@ -4,18 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tactfulness</title>
+    <title>heavy-handed</title>
     <script type="module" src="/main.js"></script>
     <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
   </head>
   <body>
-    <h1>tactfulness</h1>
+    <h1>heavy-handed</h1>
 
 
     <div id="preGameFrame">
 
-      <i>[ takt-fuhl-nis ] • noun</i>
-      <p style="margin-bottom: 60px;">the quality or skill of handling difficult or delicate situations without giving offense</p>
+      <h3 class="i">[ hev-ee-han-did ] • adjective</h3>
+      <p style="margin-bottom: 60px;">clumsy, insensitive, or overly forceful.</p>
 
       <h3>Join a room</h3>
       
@@ -35,7 +36,7 @@
       <p id="spotlightText">Spotlight text</p>
 
       <div class="card banished" id="responseCard">
-        <p class="cardText">the guy who created the templates</p>
+        <p class="cardText">as plain as a template card</p>
         <p class="cardEmoji">📄</p>
       </div>
 
@@ -59,13 +60,23 @@
     <audio id="outputAudio"></audio>
     
 
-    <div id="controlBar">
+    <div id="infoPanel">
 
-      <button id="leaveButton" disabled="true">Leave</button>
-      <button id="muteButton" disabled="true">Mute</button>
-      <input id="nameInput" disabled="true" autocomplete="off"/>
+      <div class="banished infoBar" id="playerBar">
+        <p>blev</p>
+      </div>
+
+      
+
+      <div class="infoBar">
+        <button id="leaveButton" disabled="true">Leave</button>
+        <button id="muteButton" disabled="true">Mute</button>
+        <input id="nameInput" disabled="true" autocomplete="off"/>
+      </div>
 
     </div>
-    
+
+    <button id="readyButton" class="important banished">Let's play</button>
+
   </body>
 </html>
