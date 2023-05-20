@@ -22,6 +22,29 @@ const servers = {
     {
       urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
     },
+    {
+      urls: "stun:a.relay.metered.ca:80",
+    },
+    {
+      urls: "turn:a.relay.metered.ca:80",
+      username: "0fe5084b20a2fa2f632f0736",
+      credential: "2U70VYp3djADnc2d",
+    },
+    {
+      urls: "turn:a.relay.metered.ca:80?transport=tcp",
+      username: "0fe5084b20a2fa2f632f0736",
+      credential: "2U70VYp3djADnc2d",
+    },
+    {
+      urls: "turn:a.relay.metered.ca:443",
+      username: "0fe5084b20a2fa2f632f0736",
+      credential: "2U70VYp3djADnc2d",
+    },
+    {
+      urls: "turn:a.relay.metered.ca:443?transport=tcp",
+      username: "0fe5084b20a2fa2f632f0736",
+      credential: "2U70VYp3djADnc2d",
+    },
   ],
   iceCandidatePoolSize: 10,
 };
