@@ -23,7 +23,7 @@ const servers = {
       urls: "stun:a.relay.metered.ca:80",
     },
     {
-      urls: "relay1.expressturn.com:3478",
+      urls: "turn:relay1.expressturn.com:3478",
       username: "efG6D6WWAEIJ3WIA6P",
       credential: "qktQdzg7FnH87YjM",
     }
