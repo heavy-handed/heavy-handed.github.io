@@ -25,7 +25,7 @@ const servers = {
     {
       urls: "turn:relay1.expressturn.com:3478",
       username: "efG6D6WWAEIJ3WIA6P",
-      credential: "qktQdzg7FnH87YjM",
+      credential: "qktQdzg7FnH87YjM"
     }
   ],
   iceCandidatePoolSize: 10,
