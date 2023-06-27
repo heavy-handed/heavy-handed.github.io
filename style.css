@@ -8,7 +8,7 @@ body {
   text-align: center;
   color: var(--pink-3);
   background-color: var(--pink-1);
-  margin: 60px 15px;
+  margin: 60px 3%;
   font-size: 18px;
   outline: none;
 
@@ -18,6 +18,10 @@ body {
   --pink-1: #f9b8be;
   --pink-2: #f1a8af;
   --pink-3: #d88c94;
+}
+
+html, body {
+  overflow: hidden;
 }
 
 input {
@@ -31,10 +35,10 @@ input {
   padding: 5px 20px;
   margin: 5px;
   border-width: 0px;
-  border-radius: 30px;
+  border-radius: 20px;
   background: var(--pink-1);
-  box-shadow: inset 5px 5px 10px #d49ca2,
-              inset -5px -5px 10px #ffd4db;
+  box-shadow: inset 5px 5px 10px #ae8185,
+              inset -5px -5px 10px #ffeff7;
   box-sizing: content-box;
 }
 
@@ -42,27 +46,37 @@ button {
   font-family: 'Sniglet';
   font-size: 15px;
   color: var(--pink-3);
-  height: 30px;
-  width: 60px;
+  height: 40px;
+  width: 70px;
   padding: 5px 5px;
   margin: 5px;
   border-width: 0px;
-  border-radius: 30px;
+  border-radius: 20px;
   background-color: var(--pink-1);
-  box-shadow: 5px 5px 10px #d49ca2,
-             -5px -5px 10px #ffd4db;
-  box-sizing: content-box;
+  box-shadow: 5px 5px 10px #ae8185,
+             -5px -5px 10px #ffeff7,
+             inset 0px 0px 0px #976268,
+             inset -0px -0px 0px #ffb6c0;
+  box-sizing: border-box;
+  transition-duration: 0.3s;
 }
 
 button.important {
   color: var(--green-3);
-  height: 30px;
-  width: 225px;
-  padding: 5px 10px;
+  height: 40px;
+  width: 245px;
   border-radius: 15px;
   background-color: var(--green-1);
-  box-shadow: 5px 5px 10px #87a79e,
-             -5px -5px 10px #b7e1d6;
+  box-shadow: 5px 5px 10px #6f8982,
+             -5px -5px 10px #cffff2,
+             inset 0px 0px 0px #516c65,
+             inset -0px -0px 0px #97c8bb;
+}
+
+::placeholder {
+  color: var(--pink-3);
+  transform: skewX(-10deg);
+  opacity: 0.6;
 }
 
 * {
@@ -77,22 +91,59 @@ button.important {
 }
 
 :disabled {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
-:disabled:hover {
-  color: var(--pink-3);
-  background-color: var(--pink-1);
-}
-
-button:hover {
+button:not([disabled=true]):hover {
   color: var(--pink-1);
   background-color: var(--pink-2);
+  box-shadow: 2px 2px 4px #ae8185,
+             -2px -2px 4px #ffeff7,
+             inset 0px 0px 0px #976268,
+             inset -0px -0px 0px #ffb6c0;
+  transition-duration: 0.3s;
 }
 
-button.important:hover {
+button:not([disabled=true]):active {
+  color: var(--pink-2);
+  background-color: var(--pink-3);
+  box-shadow: 0px 0px 0px #ae8185,
+             -0px -0px 0px #ffeff7,
+             inset 2px 2px 4px #976268,
+             inset -2px -2px 4px #ffb6c0;
+  transition-duration: 0.1s;
+}
+
+button.important:not([disabled=true]):hover {
   color: var(--green-1);
   background-color: var(--green-2);
+  box-shadow: 2px 2px 4px #6f8982,
+             -2px -2px 4px #cffff2,
+             inset 0px 0px 0px #516c65,
+             inset -0px -0px 0px #97c8bb;
+  transition-duration: 0.3s;
+}
+
+button.important:not([disabled=true]):active {
+  color: var(--green-2);
+  background-color: var(--green-3);
+  box-shadow: 0px 0px 0px #6f8982,
+             -0px -0px 0px #cffff2,
+             inset 2px 2px 4px #516c65,
+             inset -2px -2px 4px #97c8bb;
+  transition-duration: 0.1s;
+}
+
+input:not([disabled=true]):hover {
+  box-shadow: inset 2px 2px 4px #ae8185,
+              inset -2px -2px 4px #ffeff7;
+  transition-duration: 0.3s;
+}
+
+input:not([disabled=true]):focus {
+  box-shadow: inset 2px 2px 4px #ae8185,
+              inset -2px -2px 4px #ffeff7;
+  transition-duration: 0.3s;
 }
 
 button.selected {
@@ -111,24 +162,23 @@ button.important.selected {
 }
 
 p {
+  margin: 10px;
   font-size: 18px;
-}
-
-img.emoji {
-  height: 1em;
-  width: 1em;
-  margin: 0 .05em 0 .1em;
-  vertical-align: -0.1em;
+  line-height: 100%;
 }
 
 h1 {
+  margin: 0px;
+  margin-bottom: 10px;
   font-weight: 800;
   font-size: 50px;
-  margin: 10px;
+  line-height: 100%;
 }
 
 h2, h3 {
+  margin: 10px;
   font-weight: 400;
+  line-height: 100%;
 }
 
 .i {
@@ -139,6 +189,8 @@ h2, h3 {
 
 #infoPanel {
   position: absolute;
+  width: 94%;
+  max-width: 340px;
   display: flex;
   flex-direction: column;
   bottom: 10px;
@@ -146,50 +198,101 @@ h2, h3 {
 
 #playerBar {
   height: auto;
-  padding: 5px 5px;
+  margin-bottom: 20px;
+}
+
+#controlBar {
+  padding-top: calc(100% / (330 / 60));
 }
 
 .infoBar {
+  position: relative;
   color: var(--pink-3);
-  height: 40px;
-  padding: 5px 5px;
-  margin: 10px;
+  width: 100%;
   border-width: 0px;
   border-radius: 30px;
   background-color: var(--pink-1);
-  box-shadow: 5px 5px 10px #d49ca2,
-             -5px -5px 10px #ffd4db;
-  box-sizing: content-box;
-  display: table;
+  box-shadow: 5px 5px 10px #ae8185,
+             -5px -5px 10px #ffeff7;
+  box-sizing: border-box;
   align-items: center;
   justify-content: left;
 }
 
 .infoBar p {
-  padding: 10px 15px;
+  padding: 15px 15px;
   margin: auto;
   text-align: left;
 }
 
-#readyButton {
+.infoBar input {
+  height: calc(100% / (50 / 30));
+  max-height: 30px;
+  width: calc(100% / (330 / 120));
+  max-width: 120px;
+  padding: calc(100% / (330 / 5)) calc(100% / (330 / 20));
+  margin: calc(100% / (330 / 5));
+}
+
+.infoBar button {
+  height: calc(100% / (50 / 40));
+  max-height: 40px;
+  width: calc(100% / (330 / 70));
+  max-width: 70px;
+  padding: calc(100% / (330 / 5));
+  margin: calc(100% / (330 / 5));
+}
+
+.wrapper {
   position: absolute;
-  bottom: 15px;
+  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  margin: 0 auto;
+  padding: calc(100% / (330 / 5));
+  box-sizing: border-box;
+  display: flex;
+}
+
+#readyButton {
+  position: absolute;
+  bottom: 22.5px;
+  left: 0px;
+  right: 0px;
+  margin: 0px auto;
+}
+
+#notificationPanel {
+  display: table;
+  position: absolute;
+  bottom: 0px;
+  right: 15px;
+  margin: 10px;
+  padding: 5px;
+  align-items: center;
+  height: 50px;
+}
+
+#notificationPanel p {
+  margin: 9px 5px;
+  padding: 5px;
+  transform: translateY(0px);
+}
+
+#notificationPanel p.banished {
+  transform: translateY(50px);
 }
 
 #preGameFrame {
   position: absolute;
   top: 110px;
-  left: 10%;
-  right: 10%;
-  bottom: 60px;
-  padding: 5px 5px;
-  margin: 5px;
+  left: 3%;
+  right: 3%;
+  bottom: 80px;
+  padding: 20px;
   border-width: 0px;
   border-radius: 30px;
-  box-sizing: content-box;
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
 }
@@ -202,14 +305,13 @@ h2, h3 {
 #gameFrame {
   position: absolute;
   top: 110px;
-  left: 10%;
-  right: 10%;
-  bottom: 60px;
-  padding: 5px 5px;
-  margin: 5px;
+  left: 3%;
+  right: 3%;
+  bottom: 80px;
+  padding: 20px;
   border-width: 0px;
   border-radius: 30px;
-  box-sizing: content-box;
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
 }
@@ -222,14 +324,13 @@ h2, h3 {
 #disconnectFrame {
   position: absolute;
   top: 110px;
-  left: 10%;
-  right: 10%;
-  bottom: 60px;
-  padding: 5px 5px;
-  margin: 5px;
+  left: 3%;
+  right: 3%;
+  bottom: 80px;
+  padding: 20px;
   border-width: 0px;
   border-radius: 30px;
-  box-sizing: content-box;
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
 }
@@ -239,11 +340,24 @@ h2, h3 {
   pointer-events: none;
 }
 
-#cardFrame {
-  box-sizing: content-box;
+#spotlightFrame {
+  height: 50%;
+  padding: inherit;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+#cardFrame {
+  height: calc(50% - 69px);
+  padding: inherit;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 5px 5px 10px #ae8185, inset -5px -5px 10px #ffeff7;
+  border-radius: 30px;
 }
 
 #cardFrame.banished * {
@@ -254,31 +368,56 @@ h2, h3 {
 .card {
   width: 200px;
   height: 250px;
-  margin: auto;
-  margin-top: 10px;
   border-style: solid;
   border-width: 5px;
-  border-color: #444444;
+  margin: auto;
   border-radius: 20px;
+  border-color: #EEEEEE;
   background-color: #EEEEEE;
-  box-shadow: 5px 5px 10px #444444,
-             -5px -5px 10px #EEEEEE;
-}
-
-.card:not([id="responseCard"]):hover {
-  background-color: var(--pink-1);
-  box-shadow: 5px 5px 10px #d49ca2,
-             -5px -5px 10px #ffd4db;
+  box-shadow: 5px 5px 10px #444444;
+  transition-duration: 0.3s;
 }
 
 .card p {
   pointer-events: none;
 }
 
+.card p:not([class="cardText"], [class="cardEmoji"]) {
+  color: var(--green-1);
+  opacity: 0;
+}
+
+.card.selected {
+  border-width: 5px;
+  border-color: var(--green-1);
+}
+
+#responseCard {
+  border-width: 5px;
+  border-color: var(--green-1);
+}
+
+.card.selected p {
+  color: var(--green-1);
+  opacity: 1;
+}
+
+#responseCard p {
+  color: var(--green-1);
+  opacity: 1;
+}
+
+.card:not([id="responseCard"]):hover {
+  border-color: #FFFFFF00;
+  box-shadow: 2px 2px 4px #444444;
+  transition-duration: 0.3s;
+}
+
 .cardText {
   text-align: left;
   margin: 12px;
   margin-right: 0px;
+  height: 198px;
   float: left;
   width: 140px;
   color: #444444;
@@ -287,10 +426,18 @@ h2, h3 {
 }
 
 .cardEmoji {
+  font-size: 22px;
   width: 30px;
   height: 30px;
   margin: 12px;
   margin-left: 6px;
+  margin-bottom: 180px;
   float: right;
   color: #444444;
+}
+
+img.emoji {
+  height: 1em;
+  width: 1em;
+  margin: 4px;
 }

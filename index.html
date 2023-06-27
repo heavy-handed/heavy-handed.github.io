@@ -13,14 +13,14 @@
     <h1>heavy-handed</h1>
 
 
-    <div id="preGameFrame">
+    <div class="" id="preGameFrame">
 
       <h3 class="i">[ hev-ee-han-did ] • adjective</h3>
       <p style="margin-bottom: 60px;">clumsy, insensitive, or overly forceful.</p>
 
       <h3>Join a room</h3>
       
-      <input id="joinInput" autocomplete="off"/>
+      <input id="joinInput" placeholder="room code" autocomplete="off"/>
       <button id="joinButton">Join</button>
 
       <h3>Create a room</h3>
@@ -35,13 +35,25 @@
       <h3 id="segmentText">Segment</h3>
       <p id="spotlightText">Spotlight text</p>
 
-      <div class="card banished" id="responseCard">
-        <p class="cardText">as plain as a template card</p>
-        <p class="cardEmoji">📄</p>
+      <div id="spotlightFrame">
+        <div class="card banished" id="responseCard">
+          <p class="cardText">as plain as a template card</p>
+          <p class="cardEmoji">📄</p>
+          <p></p>
+        </div>
       </div>
 
       <div class="banished" id="cardFrame">
-
+        <div class="card" id="">
+          <p class="cardText">as plain as a template card</p>
+          <p class="cardEmoji">📄</p>
+          <p></p>
+        </div>
+        <div class="card" id="">
+          <p class="cardText">as plain as a template card</p>
+          <p class="cardEmoji">📄</p>
+          <p></p>
+        </div>
       </div>
 
     </div>
@@ -63,20 +75,23 @@
     <div id="infoPanel">
 
       <div class="banished infoBar" id="playerBar">
-        <p>blev</p>
+        <p>Player</p>
       </div>
 
-      
-
-      <div class="infoBar">
-        <button id="leaveButton" disabled="true">Leave</button>
-        <button id="muteButton" disabled="true">Mute</button>
-        <input id="nameInput" disabled="true" autocomplete="off"/>
+    
+      <div class="infoBar" id="controlBar">
+        <div class="wrapper">
+          <button id="leaveButton" disabled="true">Leave</button>
+          <button id="muteButton" disabled="true">Mute</button>
+          <input id="nameInput" disabled="true" placeholder="" autocomplete="off"/>
+        </div>
       </div>
 
     </div>
 
     <button id="readyButton" class="important banished">Let's play</button>
+
+    <div id="notificationPanel"></div>
 
   </body>
 </html>

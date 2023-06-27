@@ -1,5 +1,13 @@
+twemoji.parse(document.body)
+
+
+const majorVersion = '0.3'
+
+// var is global, let is block scope
+
 import * as firebase from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
 import * as firestore from 'https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js'
+import * as auth from 'https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js'
 
 const firebaseConfig = {
   apiKey: "AIzaSyBJogGCKQFmy36HfQeHnxgr7sL930E6GFk",
@@ -13,6 +21,8 @@ const firebaseConfig = {
 
 if (!firebase._apps.length) {
   let app = firebase.initializeApp(firebaseConfig);
+
+  auth.signInAnonymously(auth.getAuth())
 
   var db = firestore.getFirestore(app)
 }
@@ -61,7 +71,6 @@ function sendToPeers(data) {
 
       if (parsedData.players) {
         delete parsedData.players[peerId]
-        console.log('si 0.5')
       }
     }
   })
@@ -92,12 +101,16 @@ function wakeObject(object) { return JSON.parse(JSON.stringify(object)) }
 
 const initialGameState = {
   currentRound: {
+    roundNum: 0,
     segment: '',
+    segmentTitle: '',
     timeLeft: 0,
     spotlight: '',
     promptType: '',
+    promptId: '',
     player: ''
   },
+  numRounds: 5,
   players: {},
   //numPlayers: 2,
 };
@@ -127,6 +140,7 @@ const dismissButton = document.getElementById('dismissButton')
 const responseCard = document.getElementById('responseCard');
 const responseText = responseCard.children[0];
 const responseEmoji = responseCard.children[1];
+const responseContext = responseCard.children[2];
 
 const playerBar = document.getElementById('playerBar')
 
@@ -134,48 +148,58 @@ const leaveButton = document.getElementById('leaveButton');
 const muteButton = document.getElementById('muteButton');
 const nameInput = document.getElementById('nameInput');
 
+const notificationPanel = document.getElementById('notificationPanel')
+
 
 // Element classes
 const cards = document.getElementsByClassName('card');
 
 
-const prompts = {
-  'standard': {
-    'name': 'Standard prompt',
-    'prompts':  [
-        'Industry advocates have criticised',
-        'Is anyone here',
-        'An apartment littered with strangers\' clothes. Day in the life of',
-        'Yikes. This place is in urgent need of',
-        'The President of the United States is',
-        'Riddle me this:',
-        'My dad is skeptical of the science behind',
-        'What\'s life without',
-        'Yikes. The office is in urgent need of',
-        'I\'ve travelled back in time to stop',
-        'I\'m not ill, I\'m simply',
-        'Took a trip to Timbuktu. My favourite thing? The bit where I was',
-        'Come on, how does this exist: ',
-        'Ugh, what\'s that smell? Someone\'s',
-        'New num, who dis?',
-        '1944, a year of',
-        'Times are tough, but at least I\'m not',
-        'Sorry to inform you, but you\'re',
-        'There will always be a special place in my heart for',
-        'What the haters don\'t know is I\'m',
-        'Let\'s take a moment to appreciate',
-        'Shout out to',
-        'They\'re back at it again,'
+const prompts = [
+  {
+    'name': 'Standard',
+    'prompts': [
+      'Industry advocates have criticised ',
+      'Is anyone here ',
+      'An apartment littered with strangers\' clothes. Day in the life of ',
+      'The President of the United States is ',
+      'My dad is skeptical of the science behind ',
+      'What\'s life without ',
+      'Yikes. The office is in urgent need of ',
+      'I\'ve travelled back in time to stop ',
+      'I\'m not ill, I\'m simply ',
+      'Took a trip to Timbuktu. My favourite thing? The bit where I was ',
+      'Ugh, what\'s that smell? Someone\'s ',
+      '1944, a year of ',
+      'Shakespeare was no artist. He was merely ',
+      'Times are tough, but at least I\'m not ',
+      'Sorry to inform you, but you\'re ',
+      'There will always be a special place in my heart for ',
+      'What the haters don\'t know is I\'m ',
+      'Let\'s take a moment to appreciate ',
+      'Shout out to ',
+      'They\'re back at it again, ',
+      'That\'s what I hate about those foreigners, they are always '
     ]
-  }
-}
+  },
+  /*{
+    'name': 'Dual',
+    'prompts': [
+      [
+        'I think ',
+        ' is best described as ',
+        '.'
+      ]
+    ]
+  }*/
+]
 
-const responses = [
+const responses = [ // responseString will break if no. of card packs exceeds 36
   {
     'emoji': '🏳️‍🌈',
     'responses': [
       'gay',
-      'a fairy, skittle, special snowflake',
+      'a fairy, a skittle, a special snowflake',
       'being homophobic',
       'converting my straight friends',
       'using a colourful word which rhymes with maggot',
@@ -191,50 +215,50 @@ const responses = [
       'more closeted than George Washington',
       'regretting the legalization of same-sex marriage',
       'the definition of bi-erasure',
-      'in agreement that lesbians are a woke myth',
+      'a lesbian (lol)',
       'one o\' them raging homosexuals',
       'the pride month equivalent of The Grinch',
       'a big fan of compulsory homosexuality',
       'livin\' life queer',
       'banging men',
-      'attending drama classes',
-      'a drag queen'
+      'a twink in the drama class',
+      'getting pissed at Mardi Gras'
     ]
   },
   {
     'emoji': '🤓',
     'responses': [
       'factorising the polynomial',
-      'the next Einstein',
+      'Albert Einstein',
       'pursuing a career in quantum physics',
       'reciting pi to at least three digits',
-      'radiating nerd emoji',
-      'mentally gifted',
-      'paying off my college debt',
+      'giving nerd emoji right now, I can\'t lie',
+      'gifted',
+      'paying off college debt',
       'studying some social skills',
       'a sweaty nerd',
       'the Kowalski of the class',
-      'calculating the probability that you\'re a nerd',
+      'calculating the probability that you\'re a twig',
       'asking for extension questions',
       'a product of the private education system',
-      'the Dweeb of the Year',
+      'Dweeb of the Year',
       'focusing on math and music, nothing else matters',
-      'a virgin',
-      'a brainiac',
-      'selling cheat-sheets, 50 cents a pop',
+      'a virgin for life',
+      'mentally divergent at such a young age',
+      'stealing lunch money and paying for assignments',
       'doing homework',
-      'Stephen Hawking',
+      'the next Stephen Hawking',
       'a Nobel Prize winner',
       'Mayor of Dorktopia',
-      'hanging out at the bully-free zone',
-      'schooling these other nerds to prove superiority',
+      'hanging out in the bully-free zone',
+      'gettin\' schooled',
       'one of our greatest minds'
     ]
   },
   {
     'emoji': '🇬🇷',
     'responses': [
-      'a malakia',
+      'a douchebag Kalymnian',
       'spraying tzatziki everywhere',
       'adding incest to the Olympics',
       'Greece\'s debt collector',
@@ -242,16 +266,16 @@ const responses = [
       'grillin\' and chillin\'',
       'shouting \'Eureka\' and running nude down the street',
       'the godfather of democracy',
-      'Plato',
-      'sailing to Athens',
-      'using calamari as a means of torture',
-      'bringing democracy to the people (only the male elite)',
+      'Aristotle',
+      'sailing to Athens for an orgy',
+      'fantasising over calamari rings',
+      'inventing democracy, then giving it to the male elite',
       'the owner of a construction company',
       'a good-for-nothing wog',
       'pretending that a bunch of little islands is a \'country\'',
       'Hercules',
       'doing the Macarena',
-      'more smoked than a souvla',
+      'smoking my souvlaki',
       'strong Greek sperm',
       'a matter of Greek mythology',
       'penetrating Troy with a horse',
@@ -266,7 +290,7 @@ const responses = [
 // 1. Setup media sources
 
 callButton.onclick = async () => {
-
+  
 
   // P A R T  1
 
@@ -281,13 +305,49 @@ callButton.onclick = async () => {
 
   myId = 0
 
+  function generateResponseString() {
+
+    let currentString = ''
+
+    let i = 1
+    while (i <= gameState.numRounds) {
+
+      currentString = currentString + Math.floor(Math.random() * Object.keys(responses).length).toString(Object.keys(responses).length)
+
+      let responsesChosen = []
+
+      let j = 1
+      while (j <= 5) {
+        
+        let newResponse = Math.floor(Math.random() * 25).toString(25)
+
+        while (responsesChosen.find(element => element == newResponse)) {
+          newResponse = Math.floor(Math.random() * 25).toString(25)
+        }
+
+        currentString = currentString + newResponse
+        responsesChosen.push(newResponse)
+        
+        j++
+
+      }
+
+      i++
+
+    }
+
+    return currentString
+
+  }
+
   gameState.players[myId] = ({
     id: myId,
     name: 'Host',
     ready: false,
     muted: false,
+    response: 0,
     responsePack: 0,
-    response: 0
+    responseString: generateResponseString(),
   })
 
   // Reference Firestore collections for signaling
@@ -299,16 +359,19 @@ callButton.onclick = async () => {
   
   let callDoc = firestore.doc(db, 'calls', callId)
   await firestore.setDoc(callDoc, {})
-  let offerCandidates = firestore.collection(callDoc, 'offerCandidates');
-  let answerCandidates = firestore.collection(callDoc, 'answerCandidates');
+  let offerCandidates = await firestore.collection(callDoc, 'offerCandidates');
+  let answerCandidates = await firestore.collection(callDoc, 'answerCandidates');
 
   segmentText.innerText = 'Lobby'
   spotlightText.innerText = `Waiting for 4 players to join the game.
 Your room code is ` + callId + `.`
 
-  gameState.currentRound.segment = 'Lobby'
+  gameState.currentRound.segment = 'lobby'
+  gameState.currentRound.segmentTitle = 'Lobby'
   gameState.currentRound.spotlight = `Waiting for 4 players to join the game.
 Your room code is ` + callId + `.`
+
+  nameInput.setAttribute('placeholder', 'Host')
 
   leaveButton.removeAttribute('disabled')
   //muteButton.removeAttribute('disabled')
@@ -332,7 +395,7 @@ Your room code is ` + callId + `.`
 
   function runGame() {
 
-    let roundNum = 1
+    gameState.currentRound.roundNum = 1
     let promptsChosen = []
 
     readyButton.classList.remove('banished')
@@ -346,25 +409,63 @@ Your room code is ` + callId + `.`
 
     function runRound() {
 
-      var promptId = Math.floor(Math.random() * (prompts.standard.prompts.length))
+      function constructPromptString(promptType, promptId, responses) {
 
-      while (promptsChosen.find(element => element == promptId)) {
-         
-        promptId = Math.floor(Math.random() * (prompts.standard.prompts.length))
+        let responseStrings = responses
+        
+        if (responses == null) {
+          responseStrings = ['_____', '_____']
+        }
+        
+        let promptString = ''
+
+        if (promptType == 0) {
+
+          promptString = prompts[promptType].prompts[promptId] + responseStrings[0]
+
+        } else if (promptType == 1) {
+
+          let i = 1
+
+          while (i < prompts[promptType].prompts[promptId].length) {
+
+            promptString = promptString + prompts[promptType].prompts[promptId][i - 1] + responseStrings[i - 1]
+
+            i++
+
+          }
+
+          promptString = promptString + prompts[promptType].prompts[promptId][i - 1]
+          
+        }
+
+        return promptString
 
       }
 
-      var prompt = prompts.standard.prompts[promptId]
+      let promptType = Math.floor(Math.random() * prompts.length)
+
+      let promptId = Math.floor(Math.random() * (prompts[promptType].prompts.length))
+
+      while (promptsChosen.find(element => element == promptId)) {
+         
+        promptId = Math.floor(Math.random() * (prompts[promptType].prompts.length))
+
+      }
+
       promptsChosen.push(promptId)
 
-      gameState.currentRound.segment = 'Prompt'
-      gameState.currentRound.spotlight = prompt + ' _____'
-      gameState.currentRound.promptType = 'standard'
+      let promptString = constructPromptString(promptType, promptId)
+
+      gameState.currentRound.segment = 'prompt'
+      gameState.currentRound.segmentTitle = prompts[promptType].name + ' prompt'
+      gameState.currentRound.spotlight = promptString
+      gameState.currentRound.promptType = promptType
+      gameState.currentRound.promptId = promptId
       gameState.currentRound.timeLeft = 3
 
-      
-      segmentText.innerText = 'Prompt'
-      spotlightText.innerText = prompt + ' _____'
+      segmentText.innerText = prompts[promptType].name + ' prompt'
+      spotlightText.innerText = promptString
 
       responseCard.classList.add('banished')
 
@@ -381,7 +482,8 @@ Your room code is ` + callId + `.`
 
       setTimeout(function() {
 
-        gameState.currentRound.segment = 'Response'
+        gameState.currentRound.segment = 'response'
+        gameState.currentRound.segmentTitle = 'Response'
         gameState.currentRound.timeLeft = 15
 
         segmentText.innerText = 'Response'
@@ -391,19 +493,13 @@ Your room code is ` + callId + `.`
         })
 
         let i = 1
-        let responsePackChosen = Math.floor(Math.random() * (responses.length))
+        let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6), Object.keys(responses).length)
         let responsesChosen = []
 
         while (i <= 5) {
 
-          let responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
-
-          while (responsesChosen.find(element => element == responseId)) {
-         
-            responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
-
-          }
-
+          let responseId = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6 + i), 25)
+          
           responsesChosen.push(responseId)
           
           let newCard = cardFrame.appendChild(responseCard.cloneNode(true))
@@ -411,10 +507,21 @@ Your room code is ` + callId + `.`
           newCard.classList.remove('banished')
           newCard.children[0].innerText = responses[responsePackChosen].responses[responseId]
           newCard.children[1].innerText = responses[responsePackChosen].emoji
+          newCard.children[2].innerText = ''
 
           twemoji.parse(newCard.children[1])
 
           newCard.onclick = async () => {
+
+            Object.keys(newCard.parentElement.children).forEach((child) => {
+
+              newCard.parentElement.children[child].classList.remove('selected')
+              newCard.parentElement.children[child].children[2].innerText = ''
+
+            })
+
+            newCard.classList.add('selected')
+            newCard.children[2].innerText = 'selected'
 
             gameState.players[myId].responsePack = responsePackChosen + 1
             gameState.players[myId].response = responseId + 1
@@ -441,7 +548,8 @@ Your room code is ` + callId + `.`
 
             setTimeout(function() {
               
-              gameState.currentRound.segment = 'Reveal'
+              gameState.currentRound.segment = 'reveal'
+              gameState.currentRound.segmentTitle = 'Reveal'
               gameState.currentRound.timeLeft = 6
               gameState.currentRound.player = player.id
 
@@ -451,18 +559,28 @@ Your room code is ` + callId + `.`
 
               responseCard.classList.remove('banished')
 
-              gameState.currentRound.spotlight = player.id
-
               if (player.responsePack == 0 || responses[player.responsePack - 1] === undefined || player.response == 0 || responses[player.responsePack - 1].responses[player.response - 1] === undefined) {
-                responseText.innerText = player.name + ' gave no response'
+                let promptString = constructPromptString(promptType, promptId)
+
+                gameState.currentRound.spotlight = promptString
+
+                spotlightText.innerText = promptString                
+                responseText.innerText = 'no response'
                 responseEmoji.innerText = '📄'
+                responseContext.innerText = player.name
               } else {
+                let promptString = constructPromptString(promptType, promptId, [ responses[player.responsePack - 1].responses[player.response - 1] ])
+
+                gameState.currentRound.spotlight = promptString
+
+                spotlightText.innerText = promptString
                 responseText.innerText = responses[player.responsePack - 1].responses[player.response - 1]
                 responseEmoji.innerText = responses[player.responsePack - 1].emoji
+                responseContext.innerText = player.name
               }
 
               twemoji.parse(responseEmoji)
-
+              
               sendToPeers(gameState);
 
             }, 6000 * keyIndex)
@@ -473,15 +591,16 @@ Your room code is ` + callId + `.`
 
             responseCard.classList.add('banished')
 
-            roundNum++
+            gameState.currentRound.roundNum++
 
-            if (roundNum <= 5) {
+            if (gameState.currentRound.roundNum <= gameState.numRounds) {
 
               runRound()
 
             } else {
 
-              gameState.currentRound.segment = 'Podium'
+              gameState.currentRound.segment = 'podium'
+              gameState.currentRound.segmentTitle = 'Podium'
               gameState.currentRound.timeLeft = 5
               gameState.currentRound.spotlight = 'The real winner was friendship.'
 
@@ -512,7 +631,7 @@ Your room code is ` + callId + `.`
         gameState.currentRound.timeLeft = timeLeft
 
         segmentText.classList.add('i')
-        segmentText.innerText = gameState.currentRound.segment + ' • ' + timeLeft + 's'
+        segmentText.innerText = gameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
 
         var timer = setInterval(function() {
 
@@ -523,7 +642,7 @@ Your room code is ` + callId + `.`
             
             segmentText.classList.remove('i')
           } else {
-            segmentText.innerText = gameState.currentRound.segment + ' • ' + timeLeft + 's'
+            segmentText.innerText = gameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
           }
 
         }, 1000)
@@ -573,11 +692,12 @@ Your room code is ` + callId + `.`
         name: 'Player ' + (playerId + 1),
         ready: false,
         muted: false,
+        response: 0,
         responsePack: 0,
-        response: 0
+        responseString: generateResponseString(),
       })
 
-      if (Object.keys(gameState.players).length >= 4 && gameState.currentRound.segment == 'Lobby') {
+      if (Object.keys(gameState.players).length >= 4 && gameState.currentRound.segment == 'lobby') {
         
         let newPlayerLabel = document.createElement('p')
         newPlayerLabel.innerText = gameState.players[playerId].name
@@ -586,7 +706,7 @@ Your room code is ` + callId + `.`
         
         runGame()
         
-      } else if (gameState.currentRound.segment == 'Lobby') {
+      } else if (gameState.currentRound.segment == 'lobby') {
 
         let newPlayerLabel = document.createElement('p')
         newPlayerLabel.innerText = gameState.players[playerId].name
@@ -614,7 +734,7 @@ Your room code is ` + callId + `.`
 
             let offerDescription = await newPc.createOffer();
             await newPc.setLocalDescription(offerDescription);
-        
+            
             let offer = {
               sdp: offerDescription.sdp,
               type: offerDescription.type,
@@ -657,32 +777,55 @@ Your room code is ` + callId + `.`
     }
 
     newChannel.onclosing = (event) => {
-      console.log('discon.')
       sendToPeers(gameState)
     }
 
     // Get candidates for caller, save to db
     newPc.onicecandidate = (event) => {
-      event.candidate && firestore.addDoc(offerCandidates, event.candidate.toJSON());
+      if (event.candidate != null) {
+        let candidate = event.candidate.toJSON()
+        candidate.uid = auth.getAuth().currentUser.uid
+        firestore.addDoc(offerCandidates, candidate);
+      }
     };
 
     // Create offer
     let offerDescription = await newPc.createOffer();
+    offerDescription.sdp = offerDescription.sdp.replace('s=-', 's=heavy-handed v' + majorVersion)
     await newPc.setLocalDescription(offerDescription);
 
     let offer = {
       sdp: offerDescription.sdp,
       type: offerDescription.type,
     };
-
+    
     await firestore.setDoc(callDoc, { offer });
 
     // Listen for remote answer
     firestore.onSnapshot(callDoc, (snapshot) => {
       let data = snapshot.data();
-      if (!newPc.currentRemoteDescription && data?.answer) { // On answer
+      let sdp = data?.answer?.sdp
+      if (!newPc.currentRemoteDescription && data?.answer && sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == majorVersion) { // On answer
+        
         let answerDescription = new RTCSessionDescription(data.answer);
         newPc.setRemoteDescription(answerDescription);
+
+      } else if (!newPc.currentRemoteDescription && data?.answer) {
+
+        if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == NaN || sdp.substring(sdp.search('heavy-handed') + 15, sdp.search('heavy-handed') + 16) != '.') {
+
+          addNotification('An invalid client tried to join your room.')
+  
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion) {
+  
+          addNotification('A client on an outdated version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + ') tried to join your room.')
+  
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion) {
+  
+          addNotification('A client on a newer version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + ') tried to join your room.')
+  
+        }
+
       }
     });
 
@@ -697,7 +840,7 @@ Your room code is ` + callId + `.`
     });
 
   }
-
+  
   newPeer()
 
 };
@@ -707,9 +850,13 @@ Your room code is ` + callId + `.`
 // 3. Answer the call with the unique ID
 joinButton.onclick = async () => {
 
-  callId = joinInput.value.toLowerCase();
+  callId = joinInput.value.toLowerCase().trim();
 
-  const callDoc = await firestore.doc(db, "calls", callId)
+  if (callId != '') {
+
+    var callDoc = await firestore.doc(db, "calls", callId)
+
+  }
   
   if (callDoc != null) {
 
@@ -787,6 +934,8 @@ joinButton.onclick = async () => {
         
         if (prevPlayers.length == 0) {
 
+          nameInput.setAttribute('placeholder', parsedGameState.players[myId].name)
+
           leaveButton.removeAttribute('disabled')
           //muteButton.removeAttribute('disabled')
           nameInput.removeAttribute('disabled')
@@ -814,18 +963,13 @@ joinButton.onclick = async () => {
           newPlayerLabel.innerText = parsedGameState.players[newPlayers.length - 1].name
 
           playerBar.appendChild(newPlayerLabel)
-          console.log('mal')
-          console.log(gameState)
-          console.log(parsedGameState)
 
         } else if (newPlayers.length < prevPlayers.length) {
-          console.log('si')
 
           prevPlayers.forEach(playerId => {
 
             if (!parsedGameState.players[playerId]) {
               let peerIndex = prevPlayers.indexOf(playerId)
-              console.log('muy bien')
               playerBar.children[peerIndex].remove()
             }
 
@@ -844,9 +988,10 @@ joinButton.onclick = async () => {
         }
 
         
-        if (parsedGameState.currentRound.segment == 'Reveal') {
+        if (parsedGameState.currentRound.segment == 'reveal') {
 
-          segmentText.innerText = parsedGameState.currentRound.segment
+          segmentText.innerText = parsedGameState.currentRound.segmentTitle
+          spotlightText.innerText = parsedGameState.currentRound.spotlight
 
           cardFrame.classList.add('banished')
 
@@ -855,39 +1000,41 @@ joinButton.onclick = async () => {
           let player = parsedGameState.players[parsedGameState.currentRound.player]
 
           if (player.responsePack == 0 || responses[player.responsePack - 1] === undefined || player.response == 0 || responses[player.responsePack - 1].responses[player.response - 1] === undefined) {
-            responseText.innerText = player.name + ' gave no response'
+            responseText.innerText = 'no response'
             responseEmoji.innerText = '📄'
+            responseContext.innerText = player.name
           } else {
             responseText.innerText = responses[player.responsePack - 1].responses[player.response - 1]
             responseEmoji.innerText = responses[player.responsePack - 1].emoji
+            responseContext.innerText = player.name
           }
 
           twemoji.parse(responseEmoji)
 
-        } else if (parsedGameState.currentRound.segment == 'Podium') {
+        } else if (parsedGameState.currentRound.segment == 'podium') {
 
-          segmentText.innerText = parsedGameState.currentRound.segment
+          segmentText.innerText = parsedGameState.currentRound.segmentTitle
           spotlightText.innerText = parsedGameState.currentRound.spotlight
 
           responseCard.classList.add('banished')
 
         } 
         
-        if (parsedGameState.currentRound.segment == 'Lobby' || parsedGameState.currentRound.segment == 'Prompt') {
+        if (parsedGameState.currentRound.segment == 'lobby' || parsedGameState.currentRound.segment == 'prompt') {
 
           responseCard.classList.add('banished')
 
-          segmentText.innerText = parsedGameState.currentRound.segment
+          segmentText.innerText = parsedGameState.currentRound.segmentTitle
           spotlightText.innerText = parsedGameState.currentRound.spotlight
 
         }
 
-        if (parsedGameState.currentRound.segment == 'Response' && gameState.currentRound.segment != 'Response') {
+        if (parsedGameState.currentRound.segment == 'response' && gameState.currentRound.segment != 'response') {
 
           var timeLeft = 15
 
           segmentText.classList.add('i')
-          segmentText.innerText = parsedGameState.currentRound.segment + ' • ' + timeLeft + 's'
+          segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
           spotlightText.innerText = parsedGameState.currentRound.spotlight
 
           var timer = setInterval(function() {
@@ -899,7 +1046,7 @@ joinButton.onclick = async () => {
               
               segmentText.classList.remove('i')
             } else {
-              segmentText.innerText = parsedGameState.currentRound.segment + ' • ' + timeLeft + 's'
+              segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
             }
 
           }, 1000)
@@ -909,18 +1056,12 @@ joinButton.onclick = async () => {
           })
 
           let i = 1
-          let responsePackChosen = Math.floor(Math.random() * (responses.length))
+          let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6), Object.keys(responses).length)
           let responsesChosen = []
 
           while (i <= 5) {
 
-            let responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
-  
-            while (responsesChosen.find(element => element == responseId)) {
-           
-              responseId = Math.floor(Math.random() * (responses[responsePackChosen].responses.length))
-  
-            }
+            let responseId = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6 + i), 25)
   
             responsesChosen.push(responseId)
             
@@ -929,10 +1070,21 @@ joinButton.onclick = async () => {
             newCard.classList.remove('banished')
             newCard.children[0].innerText = responses[responsePackChosen].responses[responseId]
             newCard.children[1].innerText = responses[responsePackChosen].emoji
+            newCard.children[2].innerText = ''
 
             twemoji.parse(newCard)
   
             newCard.onclick = async () => {
+
+              Object.keys(newCard.parentElement.children).forEach((child) => {
+
+                newCard.parentElement.children[child].classList.remove('selected')
+                newCard.parentElement.children[child].children[2].innerText = ''
+  
+              })
+  
+              newCard.classList.add('selected')
+              newCard.children[2].innerText = 'selected'
   
               sendToPeers({
                 responsePack: responsePackChosen + 1,
@@ -961,7 +1113,7 @@ joinButton.onclick = async () => {
 
                 const offerDescription = await newPc.createOffer();
                 await newPc.setLocalDescription(offerDescription);
-
+                
                 const offer = {
                   sdp: offerDescription.sdp,
                   type: offerDescription.type,
@@ -1005,32 +1157,67 @@ joinButton.onclick = async () => {
     const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
 
     newPc.onicecandidate = (event) => {
-      event.candidate && firestore.addDoc(answerCandidates, event.candidate.toJSON());
+      if (event.candidate != null) {
+        let candidate = event.candidate.toJSON()
+        candidate.uid = auth.getAuth().currentUser.uid
+        firestore.addDoc(answerCandidates, candidate);
+      }
     };
 
     const callData = (await firestore.getDoc(callDoc)).data();
-
+    console.log(callData)
+    
     const offerDescription = callData.offer;
-    await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
 
-    const answerDescription = await newPc.createAnswer();
-    await newPc.setLocalDescription(answerDescription);
+    let sdp = offerDescription.sdp
+    
+    if (sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == majorVersion) {
+      
+      await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+          
+      const answerDescription = await newPc.createAnswer();
+      answerDescription.sdp = answerDescription.sdp.replace('s=-', 's=heavy-handed v' + majorVersion)
+      await newPc.setLocalDescription(answerDescription);
 
-    const answer = {
-      type: answerDescription.type,
-      sdp: answerDescription.sdp,
-    };
+      const answer = {
+        sdp: answerDescription.sdp,
+        type: answerDescription.type,
+      };
 
-    await firestore.updateDoc(callDoc, { answer });
+      await firestore.updateDoc(callDoc, { answer });
 
-    firestore.onSnapshot(offerCandidates, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          let data = change.doc.data();
-          newPc.addIceCandidate(new RTCIceCandidate(data));
-        }
+      firestore.onSnapshot(offerCandidates, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            let data = change.doc.data();
+            newPc.addIceCandidate(new RTCIceCandidate(data));
+          }
+        });
       });
-    });
+
+    } else {
+
+      newPc.close()
+
+      joinInput.removeAttribute('disabled')
+      joinButton.removeAttribute('disabled')
+      callButton.removeAttribute('disabled')
+
+      if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == NaN || sdp.substring(sdp.search('heavy-handed') + 15, sdp.search('heavy-handed') + 16) != '.') {
+
+        addNotification('This room is running an invalid version.')
+
+      } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion) {
+
+        addNotification('This room is running an older version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Ask the host to update.')
+
+      } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion) {
+
+        addNotification('This room is running a newer version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Please update in order to join.')
+
+      }
+
+    }
 
   }
 
@@ -1059,7 +1246,11 @@ muteButton.onclick = async () => { // newPc is not right, it's temporary conside
     const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
 
     newPc.onicecandidate = (event) => {
-      event.candidate && firestore.addDoc(answerCandidates, event.candidate.toJSON());
+      if (event.candidate != null) {
+        let candidate = event.candidate.toJSON()
+        candidate.uid = auth.getAuth().currentUser.uid
+        firestore.addDoc(answerCandidates, candidate);
+      }
     };
 
     const callData = (await firestore.get(callDoc)).data();
@@ -1069,10 +1260,10 @@ muteButton.onclick = async () => { // newPc is not right, it's temporary conside
 
     const answerDescription = await newPc.createAnswer();
     await newPc.setLocalDescription(answerDescription);
-
+    
     const answer = {
-      type: answerDescription.type,
       sdp: answerDescription.sdp,
+      type: answerDescription.type,
     };
 
     await firestore.updateDoc(callDoc, { answer });
@@ -1146,6 +1337,8 @@ dismissButton.onclick = async () => {
 
   playerBar.classList.add('banished')
 
+  nameInput.setAttribute('placeholder', '')
+
   leaveButton.setAttribute('disabled', true)
   //muteButton.setAttribute('disabled', true)
   nameInput.setAttribute('disabled', true)
@@ -1193,19 +1386,60 @@ function parseGameState(data, gameState, playerId) {
     
   }
 
-  if (typeof(message.response) == 'number' && gameState.currentRound.segment == 'Response') {
+  if (typeof(message.response) == 'number' && gameState.currentRound.segment == 'response') {
+
+    let responseIsValid = false
+
+    let i = 1
+    while (i <= 5) {
+
+      if (message.response - 1 == parseInt((parsedGameState.players[playerId].responseString).charAt(6 * parsedGameState.currentRound.roundNum - 6 + i), 25)) {
+        responseIsValid = true
+      }
+      
+      i++
+
+    }
     
-    parsedGameState.players[playerId].response = message.response
-    
+    if (responseIsValid) {
+      parsedGameState.players[playerId].response = message.response
+    }
+
   }
 
-  if (typeof(message.responsePack) == 'number' && gameState.currentRound.segment == 'Response') {
+  if (typeof(message.responsePack) == 'number' && gameState.currentRound.segment == 'response' && message.responsePack - 1 == parseInt((parsedGameState.players[playerId].responseString).charAt(6 * parsedGameState.currentRound.roundNum - 6), Object.keys(responses).length)) {
     
     parsedGameState.players[playerId].responsePack = message.responsePack
     
   }
 
   return parsedGameState
+
+}
+
+
+
+function addNotification(message) {
+
+  let notification = document.createElement('p')
+  notification.innerText = message
+  notification.classList.add('banished')
+
+  notificationPanel.appendChild(notification)
+
+  setTimeout(function() {
+    notification.classList.remove('banished')
+  }, 0)
+
+  setTimeout(function() {
+
+    notification.classList.add('banished')
+
+    setTimeout(function() {
+      notification.remove()
+    }, 1000)
+
+  }, 5000)
 
 }
 
