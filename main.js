@@ -1,6 +1,6 @@
 twemoji.parse(document.body)
 
-const minPlayers = 2
+const minPlayers = 4
 
 const majorVersion = '0.4'
 
@@ -730,10 +730,7 @@ callButton.onclick = async () => {
     gameState.currentRound.segment = 'prompt'
     gameState.currentRound.segmentTitle = promptList[promptType].name + ' prompt'
     gameState.currentRound.spotlight = promptString
-    var rando = Math.floor(Math.random() * Object.keys(gameState.players).length)
-    console.log(rando)
-    console.log(gameState.players)
-    gameState.currentRound.spotlightTeaser = gameState.players[rando].name
+    gameState.currentRound.spotlightTeaser = gameState.players[Math.floor(Math.random() * Object.keys(gameState.players).length)].name
     gameState.currentRound.promptType = promptType
     gameState.currentRound.promptId = promptId
     gameState.currentRound.timeLeft = 3
