@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Sniglet:wght@400;800&display=swap');
 
 body {
@@ -18,6 +17,10 @@ body {
   --pink-1: #f9b8be;
   --pink-2: #f1a8af;
   --pink-3: #d88c94;
+  --white: #eeeeee;
+  --black: #444444;
+
+  --opaque-white: 238, 238, 238;
 }
 
 html, body {
@@ -59,18 +62,26 @@ button {
              inset -0px -0px 0px #ffb6c0;
   box-sizing: border-box;
   transition-duration: 0.3s;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 button.important {
   color: var(--green-3);
   height: 40px;
-  width: 245px;
+  width: 240px;
   border-radius: 15px;
   background-color: var(--green-1);
   box-shadow: 5px 5px 10px #6f8982,
              -5px -5px 10px #cffff2,
              inset 0px 0px 0px #516c65,
              inset -0px -0px 0px #97c8bb;
+}
+
+img.icon {
+  height: 30px;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 ::placeholder {
@@ -83,7 +94,7 @@ button.important {
   transition-duration: 0.5s;
   transition-property: all;
   transition-timing-function: cubic-bezier(.25, .1, .25, 1);
-  pointer-events: all;
+  pointer-events: visible;
 }
 
 *:focus {
@@ -109,8 +120,8 @@ button:not([disabled=true]):active {
   background-color: var(--pink-3);
   box-shadow: 0px 0px 0px #ae8185,
              -0px -0px 0px #ffeff7,
-             inset 2px 2px 4px #976268,
-             inset -2px -2px 4px #ffb6c0;
+             inset 5px 5px 10px #976268,
+             inset -5px -5px 10px #ffb6c0;
   transition-duration: 0.1s;
 }
 
@@ -129,8 +140,8 @@ button.important:not([disabled=true]):active {
   background-color: var(--green-3);
   box-shadow: 0px 0px 0px #6f8982,
              -0px -0px 0px #cffff2,
-             inset 2px 2px 4px #516c65,
-             inset -2px -2px 4px #97c8bb;
+             inset 5px 5px 10px #516c65,
+             inset -5px -5px 10px #97c8bb;
   transition-duration: 0.1s;
 }
 
@@ -159,6 +170,13 @@ button.important.selected {
 .banished {
   opacity: 0;
   pointer-events: none;
+  user-select: none;
+}
+
+.banished * {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
 }
 
 p {
@@ -185,12 +203,13 @@ h2, h3 {
   margin: 0px;
   transform: skewX(-15deg);
   font-size: 18px;
+  margin-bottom: 5px;
 }
 
 #infoPanel {
   position: absolute;
   width: 94%;
-  max-width: 340px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   bottom: 10px;
@@ -198,11 +217,13 @@ h2, h3 {
 
 #playerBar {
   height: auto;
+  padding: 5px;
   margin-bottom: 20px;
+  border-radius: 20px;
 }
 
 #controlBar {
-  padding-top: calc(100% / (330 / 60));
+  padding-top: calc(100% / (410 / 60));
 }
 
 .infoBar {
@@ -219,28 +240,36 @@ h2, h3 {
   justify-content: left;
 }
 
+.infoBar div {
+  display: flex;
+}
+
 .infoBar p {
-  padding: 15px 15px;
-  margin: auto;
+  padding: 7.5px 0px 7.5px 15px;
+  margin: auto 0px;
+  font-size: 15px;
   text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .infoBar input {
   height: calc(100% / (50 / 30));
   max-height: 30px;
-  width: calc(100% / (330 / 120));
+  width: calc(100% / (410 / 120));
   max-width: 120px;
-  padding: calc(100% / (330 / 5)) calc(100% / (330 / 20));
-  margin: calc(100% / (330 / 5));
+  padding: calc(100% / (410 / 5)) calc(100% / (410 / 20));
+  margin: calc(100% / (410 / 5));
 }
 
 .infoBar button {
   height: calc(100% / (50 / 40));
   max-height: 40px;
-  width: calc(100% / (330 / 70));
+  width: calc(100% / (410 / 70));
   max-width: 70px;
-  padding: calc(100% / (330 / 5));
-  margin: calc(100% / (330 / 5));
+  padding: calc(100% / (410 / 5));
+  margin: calc(100% / (410 / 5));
 }
 
 .wrapper {
@@ -249,12 +278,12 @@ h2, h3 {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: calc(100% / (330 / 5));
+  padding: calc(100% / (410 / 5));
   box-sizing: border-box;
   display: flex;
 }
 
-#readyButton {
+#playButton {
   position: absolute;
   bottom: 22.5px;
   left: 0px;
@@ -297,9 +326,8 @@ h2, h3 {
   justify-content: center;
 }
 
-#preGameFrame.banished * {
-  opacity: 0;
-  pointer-events: none;
+#preGameFrame div {
+  display: inline-flex;
 }
 
 #gameFrame {
@@ -316,11 +344,6 @@ h2, h3 {
   justify-content: center;
 }
 
-#gameFrame.banished * {
-  opacity: 0;
-  pointer-events: none;
-}
-
 #disconnectFrame {
   position: absolute;
   top: 110px;
@@ -335,22 +358,347 @@ h2, h3 {
   justify-content: center;
 }
 
-#disconnectFrame.banished * {
-  opacity: 0;
-  pointer-events: none;
+#segmentFrame {
+  height: 45%;
+  margin-bottom: 20px;
+  display: flex;
 }
 
 #spotlightFrame {
-  height: 50%;
-  padding: inherit;
+  height: 100%;
+  width: calc(65% - 20px);
+  margin-right: 20px;
+  padding: 20px;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--pink-2);
+
+  --numCards: 0;
+  --cardDownshift: 0px;
+}
+
+#dynamicFrame {
+  position: relative;
+  height: 100%;
+  width: 35%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 30px;
+  box-shadow: 5px 5px 10px #ae8185, -5px -5px 10px #ffeff7;
+  transition-duration: 0.3s
+}
+
+#dynamicFrame * {
+  pointer-events: none;
+  user-select: none;
+  transition-duration: 0s;
+  transition: opacity 0.3s;
+}
+
+#dynamicFrameBackground {
+  height: 100%;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: var(--black);
+  background-image: url('/banners/0.png');
+  background-size: 300px;
+  display: block;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+#dynamicFrame[promptType='Standard'] #spotlightText {
+  color: var(--white);
+  text-stroke: 2px var(--black);
+  -webkit-text-stroke: 2px var(--black);
+  font-weight: 800;
+  font-size: 25px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  margin: auto;
+  height: fit-content;
+  text-shadow: var(--black) 0px 0px 20px;
+}
+
+#dynamicFrame[promptType='Standard'] #spotlightContext {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  color: var(--pink-1);
+  text-stroke: 1px var(--pink-3);
+  -webkit-text-stroke: 1px var(--pink-3);
+  font-weight: 800;
+  font-size: 25px;
+  text-shadow: var(--pink-1) 0px 0px 10px;
+}
+
+#dynamicFrame[promptType='Review'] #spotlightForeground {
+  position: absolute;
+  top: 30px;
+  bottom: 30px;
+  left: 30px;
+  right: 30px;
+  background-color: rgb(var(--opaque-white), 0.95);
+  border-width: 4px;
+  border-color: var(--black);
+  border-style: solid;
+  border-radius:  48px 48px 48px 16px;
+  box-sizing: border-box;
+  backdrop-filter: blur(3px);
+}
+
+#dynamicFrame[promptType='Review'] #spotlightDecor {
+  position: absolute;
+  bottom: 45px;
+  left: 15px;
+  height: 45px;
+  width: 45px;
+  background-color: var(--white);
+  background-size: 45px;
+  border-width: 4px;
+  border-color: var(--black);
+  border-style: solid;
+  border-radius: 100%;
+  box-sizing: border-box;
+  color: var(--green-1);
+  text-stroke: 1px var(--green-3);
+  -webkit-text-stroke: 1px var(--green-3);
+  font-weight: 800;
+  font-size: 25px;
+  text-shadow: var(--green-1) 0px 0px 20px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+#dynamicFrame[promptType='Review'] #spotlightText {
+  color: var(--black);
+  font-size: 25px;
+  position: absolute;
+  left: 50px;
+  right: 50px;
+  top: 50px;
+  letter-spacing: 2px;
+  word-spacing: 4px;
+  line-height: 1.8;
+}
+
+#dynamicFrame[promptType='Review'] #spotlightContext {
+  color: var(--black);
+  font-size: 20px;
+  position: absolute;
+  bottom: 12.5px;
+  left: 75px;
+  margin: 12.5px 0px;
+  width: calc(100% - 120px);
+  text-align: left;
+}
+
+#dynamicFrame[promptType='Conversation'] #spotlightForeground {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  background-color: rgb(var(--opaque-white), 0.95);
+  border-width: 4px;
+  border-color: var( --black);
+  border-style: solid;
+  border-radius: 20px;
+  box-sizing: border-box;
+  backdrop-filter: blur(3px);
+}
+
+#dynamicFrame[promptType='Conversation'] #spotlightDecor {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  height: 45px;
+  width: 45px;
+  background-color: var(--white);
+  background-size: 45px;
+  border-width: 4px;
+  border-color: var(--black);
+  border-style: solid;
+  border-radius: 100%;
+  box-sizing: border-box;
+  color: var(--pink-1);
+  text-stroke: 1px var(--pink-3);
+  -webkit-text-stroke: 1px var(--pink-3);
+  font-weight: 800;
+  font-size: 25px;
+  text-shadow: var(--pink-1) 0px 0px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#dynamicFrame[promptType='Conversation'] #spotlightText {
+  color: var(--pink-3);
+  background-color: var(--pink-1);
+  border-radius: 22.5px 22.5px 5px 22.5px;
+  font-size: 20px;
+  position: absolute;
+  padding: 8px 12px;
+  max-width: 250px;
+  height: min-content;
+  text-align: left;
+  bottom: 30px;
+  right: 30px;
+  margin: 0;
+}
+
+#dynamicFrame[promptType='Conversation'] #spotlightContext {
+  color: var(--black);
+  font-size: 15px;
+  position: absolute;
+  top: 65px;
+  left: -4px;
+  width: 65px;
+  margin: 10px;
+  overflow-wrap: break-word;
+}
+
+#dynamicFrame[promptType='Conversation'] .spotlightTextElement {
+  --numElements: 0;
+  color: var(--white);
+  background-color: var(--pink-3);
+  border-radius: 22.5px 22.5px 22.5px 5px;
+  font-size: 20px;
+  position: relative;
+  padding: 8px 12px;
+  max-width: max-content;
+  width: 250px;
+  overflow: unset;
+  text-align: left;
+  top: 25.5px;
+  left: 75px;
+  margin: 2px 0px;
+}
+
+#dynamicFrame[promptType='Newsflash'] #spotlightForeground {
+  position: absolute;
+  height: 89px;
+  bottom: 30px;
+  left: 30px;
+  right: 30px;
+  background-color: rgb(var(--opaque-white), 0.95);
+  border-width: 4px;
+  border-color: var(--black);
+  border-style: solid;
+  border-radius: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  backdrop-filter: blur(3px);
+}
+
+#dynamicFrame[promptType='Newsflash'] #spotlightDecor {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  height: 90px;
+  width: 90px;
+  background-color: var(--white);
+  background-size: 45px;
+  border-width: 4px;
+  border-color: var(--black);
+  border-style: solid;
+  border-radius: 100%;
+  box-sizing: border-box;
+  color: var(--green-1);
+  text-stroke: 1px var(--green-3);
+  -webkit-text-stroke: 1px var(--green-3);
+  font-weight: 800;
+  font-size: 50px;
+  text-shadow: var(--green-1) 0px 0px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#dynamicFrame[promptType='Newsflash'] #spotlightText {
+  color: var(--black);
+  font-weight: 800;
+  font-size: 25px;
+  text-transform: capitalize;
+  position: absolute;
+  bottom: 66px;
+  left: 30px;
+  padding: 10px 16px;
+  margin: 0px;
+  width: calc(100% - 60px);
+  min-height: 53px;
+  text-align: center;
+  background-color: var(--white);
+  border-width: 4px;
+  border-color: var(--black);
+  border-style: solid;
+  border-radius: 16px;
+  box-sizing: border-box;
+  
+}
+
+#dynamicFrame[promptType='Newsflash'] #spotlightContext {
+  color: var(--black);
+  font-size: 20px;
+  position: absolute;
+  bottom: 0px;
+  left: 30px;
+  padding: 6px 20px;
+  width: min-content;
+  min-width: calc(100% - 40px);
+  margin: 0px;
+  text-align: center;
+  white-space: nowrap;
+  animation: scrollingHeadline 20s linear infinite;
+  animation-delay: -10s;
+}
+
+#dynamicFrame[promptType='Newsflash'] #spotlightContext2 {
+  color: var(--black);
+  font-size: 20px;
+  position: absolute;
+  bottom: 0px;
+  left: 30px;
+  padding: 6px 20px;
+  width: min-content;
+  min-width: calc(100% - 40px);
+  margin: 0px;
+  text-align: center;
+  white-space: nowrap;
+  animation: scrollingHeadline 20s linear infinite;
+}
+
+@keyframes scrollingHeadline {
+  0% {
+    transform: translateX(calc(100% - 30px));
+  }
+  100% {
+    transform: translateX(calc(-100% - 30px));
+  }
+}
+
+#grid {
+  position: absolute;
+}
+
 #cardFrame {
-  height: calc(50% - 69px);
+  height: calc(55% - 69px);
   padding: inherit;
   box-sizing: border-box;
   display: flex;
@@ -358,11 +706,8 @@ h2, h3 {
   justify-content: center;
   box-shadow: inset 5px 5px 10px #ae8185, inset -5px -5px 10px #ffeff7;
   border-radius: 30px;
-}
 
-#cardFrame.banished * {
-  opacity: 0;
-  pointer-events: none;
+  --numCards: 0
 }
 
 .card {
@@ -372,19 +717,41 @@ h2, h3 {
   border-width: 5px;
   margin: auto;
   border-radius: 20px;
-  border-color: #EEEEEE;
-  background-color: #EEEEEE;
-  box-shadow: 5px 5px 10px #444444;
+  border-color: var(--white);
+  background-color: var(--white);
+  box-shadow: 5px 5px 10px var(--black);
   transition-duration: 0.3s;
 }
 
-.card p {
-  pointer-events: none;
+.card:nth-child(1) {
+  transform: translateY(calc((max(0 - (var(--numCards) - 1) / 2, -0 + (var(--numCards) - 1) / 2) / 4) * (min(0 - (var(--numCards) - 1) / 2, -0 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 0 - 2deg))
+}
+.card:nth-child(2) {
+  transform: translateY(calc((max(1 - (var(--numCards) - 1) / 2, -1 + (var(--numCards) - 1) / 2) / 4) * (min(1 - (var(--numCards) - 1) / 2, -1 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 1 - 2deg))
+}
+.card:nth-child(3) {
+  transform: translateY(calc((max(2 - (var(--numCards) - 1) / 2, -2 + (var(--numCards) - 1) / 2) / 4) * (min(2 - (var(--numCards) - 1) / 2, -2 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 2 - 2deg))
+}
+.card:nth-child(4) {
+  transform: translateY(calc((max(3 - (var(--numCards) - 1) / 2, -3 + (var(--numCards) - 1) / 2) / 4) * (min(3 - (var(--numCards) - 1) / 2, -3 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 3 - 2deg))
+}
+.card:nth-child(5) {
+  transform: translateY(calc((max(4 - (var(--numCards) - 1) / 2, -4 + (var(--numCards) - 1) / 2) / 4) * (min(4 - (var(--numCards) - 1) / 2, -4 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 4 - 2deg))
+}
+.card:nth-child(6) {
+  transform: translateY(calc((max(5 - (var(--numCards) - 1) / 2, -5 + (var(--numCards) - 1) / 2) / 4) * (min(5 - (var(--numCards) - 1) / 2, -5 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 5 - 2deg))
+}
+.card:nth-child(7) {
+  transform: translateY(calc((max(6 - (var(--numCards) - 1) / 2, -6 + (var(--numCards) - 1) / 2) / 4) * (min(6 - (var(--numCards) - 1) / 2, -6 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 6 - 2deg))
+}
+.card:nth-child(8) {
+  transform: translateY(calc((max(7 - (var(--numCards) - 1) / 2, -7 + (var(--numCards) - 1) / 2) / 4) * (min(7 - (var(--numCards) - 1) / 2, -7 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -10px)) rotate(calc(4deg / (var(--numCards) - 1) * 7 - 2deg))
 }
 
-.card p:not([class="cardText"], [class="cardEmoji"]) {
-  color: var(--green-1);
-  opacity: 0;
+.card p {
+  transition-duration: 0.3s;
+  pointer-events: none;
+  user-select: none;
 }
 
 .card.selected {
@@ -392,9 +759,46 @@ h2, h3 {
   border-color: var(--green-1);
 }
 
-#responseCard {
+.responseCard {
   border-width: 5px;
   border-color: var(--green-1);
+  margin: 0px;
+  position: absolute;
+  pointer-events: all;
+  transition: 0.3s 0.3s transform;
+}
+
+.responseCard:nth-child(1) { /* 12.5px*/
+  transform: translateY(calc((max(0 - (var(--numCards) - 1) / 2, -0 + (var(--numCards) - 1) / 2) / 4) * (min(0 - (var(--numCards) - 1) / 2, -0 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 0 - 50px * (var(--numCards) - 1))) rotate(calc(20deg / (var(--numCards) - 1) * 0 - 10deg));
+  z-index: 8;
+}
+.responseCard:nth-child(2) {
+  transform: translateY(calc((max(1 - (var(--numCards) - 1) / 2, -1 + (var(--numCards) - 1) / 2) / 4) * (min(1 - (var(--numCards) - 1) / 2, -1 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 1 - 50px * (var(--numCards) - 1))) rotate(calc(20deg / (var(--numCards) - 1) * 1 - 10deg));
+  z-index: 7;
+}
+.responseCard:nth-child(3) {
+  transform: translateY(calc((max(2 - (var(--numCards) - 1) / 2, -2 + (var(--numCards) - 1) / 2) / 4) * (min(2 - (var(--numCards) - 1) / 2, -2 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 2 - 50px * (var(--numCards) - 1))) rotate(calc(20deg / (var(--numCards) - 1) * 2 - 10deg));
+  z-index: 6;
+}
+.responseCard:nth-child(4) {
+  transform: translateY(calc((max(3 - (var(--numCards) - 1) / 2, -3 + (var(--numCards) - 1) / 2) / 4) * (min(3 - (var(--numCards) - 1) / 2, -3 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 3 - 50px * (var(--numCards) - 1))) rotate(calc(30deg / (var(--numCards) - 1) * 3 - 15deg));
+  z-index: 5;
+}
+.responseCard:nth-child(5) { /* -37.5*/
+  transform: translateY(calc((max(4 - (var(--numCards) - 1) / 2, -4 + (var(--numCards) - 1) / 2) / 4) * (min(4 - (var(--numCards) - 1) / 2, -4 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 4 - 50px * (var(--numCards) - 1))) rotate(calc(30deg / (var(--numCards) - 1) * 4 - 15deg));
+  z-index: 4;
+}
+.responseCard:nth-child(6) { /* -37.5*/
+  transform: translateY(calc((max(5 - (var(--numCards) - 1) / 2, -5 + (var(--numCards) - 1) / 2) / 4) * (min(5 - (var(--numCards) - 1) / 2, -5 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 5 - 50px * (var(--numCards) - 1))) rotate(calc(30deg / (var(--numCards) - 1) * 5 - 15deg));
+  z-index: 3;
+}
+.responseCard:nth-child(7) { /* -37.5*/
+  transform: translateY(calc((max(6 - (var(--numCards) - 1) / 2, -6 + (var(--numCards) - 1) / 2) / 4) * (min(6 - (var(--numCards) - 1) / 2, -6 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 6 - 50px * (var(--numCards) - 1))) rotate(calc(30deg / (var(--numCards) - 1) * 6 - 15deg));
+  z-index: 2;
+}
+.responseCard:nth-child(8) { /* -37.5*/
+  transform: translateY(calc((max(7 - (var(--numCards) - 1) / 2, -7 + (var(--numCards) - 1) / 2) / 4) * (min(7 - (var(--numCards) - 1) / 2, -7 + (var(--numCards) - 1) / 2) / (var(--numCards) - 1)) * (var(--numCards) - 1) / 2 * -30px + var(--cardDownshift))) translateX(calc(100px * (var(--numCards) - 1) / (var(--numCards) - 1) * 7 - 50px * (var(--numCards) - 1))) rotate(calc(30deg / (var(--numCards) - 1) * 7 - 15deg));
+  z-index: 1;
 }
 
 .card.selected p {
@@ -402,15 +806,23 @@ h2, h3 {
   opacity: 1;
 }
 
-#responseCard p {
+.responseCard p {
   color: var(--green-1);
   opacity: 1;
 }
 
-.card:not([id="responseCard"]):hover {
+.card:not(.responseCard):hover {
   border-color: #FFFFFF00;
-  box-shadow: 2px 2px 4px #444444;
+  box-shadow: 2px 2px 4px var(--black);
   transition-duration: 0.3s;
+}
+
+#spotlightFrame:hover {
+  --cardDownshift: 200px;
+}
+
+.responseCard:hover {
+  transform: translateY(-20px);
 }
 
 .cardText {
@@ -420,9 +832,19 @@ h2, h3 {
   height: 198px;
   float: left;
   width: 140px;
-  color: #444444;
+  color: var(--black);
   font-weight: 400;
   font-size: 20px;
+}
+
+.cardContext {
+  text-align: right;
+  margin: 12px;
+  color: var(--green-1);
+}
+
+.card:not(.responseCard):hover .cardContext {
+  opacity: 0;
 }
 
 .cardEmoji {
@@ -433,11 +855,26 @@ h2, h3 {
   margin-left: 6px;
   margin-bottom: 180px;
   float: right;
-  color: #444444;
+  color: var(--black);
+  border-radius: 5px;
+}
+
+.cardEmoji img.emoji {
+  margin: 4px;
+}
+
+.card.selected .cardEmoji {
+  background-color: var(--green-1);
+}
+
+.responseCard .cardEmoji {
+  background-color: var(--green-1);
 }
 
 img.emoji {
   height: 1em;
   width: 1em;
-  margin: 4px;
+  margin: 0 .05em 0 .1em;
+  vertical-align: -0.1em;
+  filter: drop-shadow(0px 0px 2px var(--black))
 }

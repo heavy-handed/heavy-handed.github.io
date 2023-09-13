@@ -1,7 +1,8 @@
 twemoji.parse(document.body)
 
+const minPlayers = 2
 
-const majorVersion = '0.3'
+const majorVersion = '0.4'
 
 // var is global, let is block scope
 
@@ -41,13 +42,11 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
-let localStream = null
-// https://blog.mozilla.org/webrtc/perfect-negotiation-in-webrtc/
-
-let voiceInput = null;
-let voiceOutput = null;
-
 let callId = null;
+
+var globalVolume = 1
+
+var promptsChosen = []
 
 let peerConnections = {}
 let peerChannels = {}
@@ -106,13 +105,15 @@ const initialGameState = {
     segmentTitle: '',
     timeLeft: 0,
     spotlight: '',
-    promptType: '',
-    promptId: '',
-    player: ''
+    spotlightTeaser: '',
+    responses: [],
+    promptType: 0,
+    promptId: 0,
+    player: 0,
+    playerName: '',
   },
   numRounds: 5,
   players: {},
-  //numPlayers: 2,
 };
 
 let gameState = initialGameState
@@ -123,41 +124,51 @@ var myId = null
 const callButton = document.getElementById('callButton');
 const joinInput = document.getElementById('joinInput');
 const joinButton = document.getElementById('joinButton');
-const readyButton = document.getElementById('readyButton');
-
-const outputAudio = document.getElementById('outputAudio');
+const playButton = document.getElementById('playButton');
 
 const segmentText = document.getElementById('segmentText');
-const spotlightText = document.getElementById('spotlightText');
 
 const preGameFrame = document.getElementById('preGameFrame')
 const gameFrame = document.getElementById('gameFrame')
+
+const segmentFrame = document.getElementById('segmentFrame')
+const spotlightFrame = document.getElementById('spotlightFrame')
+const dynamicFrame = document.getElementById('dynamicFrame')
+const dynamicFrameBackground = document.getElementById('dynamicFrameBackground')
+const spotlightForeground = document.getElementById('spotlightForeground');
+const spotlightDecor = document.getElementById('spotlightDecor');
+const spotlightText = document.getElementById('spotlightText');
+const spotlightContext = document.getElementById('spotlightContext');
+const spotlightContext2 = document.getElementById('spotlightContext2');
+
 const disconnectFrame = document.getElementById('disconnectFrame')
 const cardFrame = document.getElementById('cardFrame')
 
 const dismissButton = document.getElementById('dismissButton')
 
-const responseCard = document.getElementById('responseCard');
-const responseText = responseCard.children[0];
-const responseEmoji = responseCard.children[1];
-const responseContext = responseCard.children[2];
-
 const playerBar = document.getElementById('playerBar')
 
 const leaveButton = document.getElementById('leaveButton');
-const muteButton = document.getElementById('muteButton');
+const readyButton = document.getElementById('readyButton');
 const nameInput = document.getElementById('nameInput');
 
 const notificationPanel = document.getElementById('notificationPanel')
 
+const successAudio = document.getElementById('successAudio')
+const neutralAudio = document.getElementById('neutralAudio')
+const musicAudio = document.getElementById('musicAudio')
+successAudio.volume = globalVolume / 20
+neutralAudio.volume = globalVolume / 20
+musicAudio.volume = globalVolume / 10
+// add mute functionality
 
-// Element classes
-const cards = document.getElementsByClassName('card');
+const speech = window.SpeechSynthesis
 
 
-const prompts = [
+
+const promptList = [
   {
-    'name': 'Standard',
+    'name': 'Standard', // promptType = 0
     'prompts': [
       'Industry advocates have criticised ',
       'Is anyone here ',
@@ -179,30 +190,210 @@ const prompts = [
       'Let\'s take a moment to appreciate ',
       'Shout out to ',
       'They\'re back at it again, ',
-      'That\'s what I hate about those foreigners, they are always '
+      'That\'s what I hate about those foreigners, they are always ',
+      'Time flies when you\'re ',
+      'God is good. After all, he gave us ',
+      'It\'s what my great aunt does best: ',
+      'Imagine my surprise when I walked into school to find a student who was ',
+      'My life is best represented by ',
+      'I feel like ',
+      'It should be illegal to be ',
+      'Seriously though, I am literally ',
+      'Can we agree on ',
+      'When you hit rock bottom, the only way to go is ',
+      'The newest blockbuster flick is a bitter-sweet commentary on ',
+      'His music makes me want to be ',
+      'Her daughter is much like her, except that she\'s ',
+      'Watering a plant is a little bit like ',
+      'If people truly listened to the trees, they\'d realise that nature is ',
+      'When life gives you lemons, lemons give you ',
+      'This great nation can\'t deal with any more ',
+      'That\'s surprising! This time the villain wasn\'t ',
+      'Yes, you got a raise. But why would I be jealous? I\'m ',
     ]
   },
+  {
+    'name': 'Review', // promptType = 1
+    'prompts': [
+      {
+        'rating': 4,
+        'description': 'Uhh... could do with a little less tang.'
+      },
+      {
+        'rating': 1,
+        'description': 'Come on, how is this still a thing nowadays??'
+      },
+      {
+        'rating': 5,
+        'description': 'Superb. Excellent. Well-rounded.'
+      },
+      {
+        'rating': 1,
+        'description': 'Asked for a refund as soon as it came.'
+      },
+      {
+        'rating': 4,
+        'description': 'Well I love it, but it\'s certainly not for everyone.'
+      },
+      {
+        'rating': 3,
+        'description': 'Pretty average.'
+      },
+      {
+        'rating': 3,
+        'description': 'Delightful. Gets the job done most of the time.'
+      },
+      {
+        'rating': 2,
+        'description': 'Terrible birthday surprise (in my own personal experience).'
+      },
+      {
+        'rating': 4,
+        'description': 'So nostalgic. Takes me back to my youth.'
+      },
+      {
+        'rating': 1,
+        'description': 'A mistake.'
+      },
+      {
+        'rating': 3,
+        'description': 'A feeling to get high on.'
+      },
+      {
+        'rating': 2,
+        'description': 'What the freak, dude.'
+      },
+      {
+        'rating': 5,
+        'description': 'Now this is something I can wholeheartedly support!'
+      },
+      {
+        'rating': 4,
+        'description': 'As a vegan, I give this my full endorsement.'
+      },
+      {
+        'rating': 3,
+        'description': 'Mid...'
+      },
+      {
+        'rating': 1,
+        'description': 'How do I put it... painfully vanilla?'
+      },
+      {
+        'rating': 3,
+        'description': 'Good enough for the White House, good enough for me.'
+      },
+      {
+        'rating': 5,
+        'description': 'Finally! Some fun for the entire family.'
+      },
+    ]
+  },
+  {
+    'name': 'Conversation', // promptType = 2
+    'prompts': [
+      {
+        'setup': [ // structure allows for potential 'punchline' in future
+          'New phone, who dis?'
+        ]
+      },
+      {
+        'setup': [
+          'WHAT',
+          'DO',
+          'YOU',
+          'WANT',
+          'FROM',
+          'ME??'
+        ]
+      },
+      {
+        'setup': [
+          'going shoppin\'',
+          'want anything?'
+        ]
+      },
+      {
+        'setup': [
+          'hold up girly~',
+          'are you thinking what im thinking?'
+        ]
+      },
+      {
+        'setup': [
+          'I seriously don\'t get it.',
+          'Like, what\'s keeping your parents together?'
+        ]
+      },
+      {
+        'setup': [
+          'lads',
+          'what do we put on the end-of-term bucket list'
+        ]
+      },
+      {
+        'setup': [
+          'Jerry.',
+          'You weren\'t at school today, my sweet.',
+          'What were you doing?!?',
+          'Love from Mum. <3'
+        ]
+      },
+    ]
+  },
+  {
+    'name': 'Newsflash',
+    'prompts': [
+      'Cities in chaos as thousands flee',
+      'Middle East tensions increased after unexpected aggression',
+      'Is it really the most effective option on the table?',
+      'Celebrities weigh in on new trend',
+      'Latest royal drama has Britain in shellshock!',
+      'Coming up: Another political scandal',
+      'Critics calling it a \'huge step backwards\'',
+      'Listeners raving after Taylor Swift drops new single',
+      'The next big religion?',
+      'Protestors are armed and angry - and this is why',
+      'Black-listed cyber criminal tells all',
+      'Suspect claims she wanted to save innocent lives',
+      'Book launched during mental health week',
+      'Police say a lack of discipline is to blame',
+      'New targets \'unachievable\' says spokesperson',
+      'China closes border due to rapid increases'
+    ]
+  }
   /*{
-    'name': 'Dual',
+    'name': 'Dual', // temporarily, promptType = 50
     'prompts': [
       [
         'I think ',
         ' is best described as ',
+        '.'
+      ],
+      [
+        'Stop worrying about ',
+        ' and start paying attention to ',
+        '.'
+      ],
+      [
+        'Success is built on ',
+        ' and ',
         '.'
       ]
     ]
   }*/
 ]
 
-const responses = [ // responseString will break if no. of card packs exceeds 36
+
+const responseList = [ // responseString will break if no. of card packs exceeds 36
   {
     'emoji': '🏳️‍🌈',
     'responses': [
       'gay',
-      'a fairy, a skittle, a special snowflake',
+      'a skittle, a poof, and a bumboy',
       'being homophobic',
-      'converting my straight friends',
-      'using a colourful word which rhymes with maggot',
+      'pride month pizazz',
+      'a colourful word which rhymes with maggot',
       'coming out in a nursing home',
       'an LGBTQ rights activist',
       'that kid who has two dads for some reason',
@@ -211,41 +402,41 @@ const responses = [ // responseString will break if no. of card packs exceeds 36
       'pansexual (attracted to cooking appliances)',
       'a tad fruity',
       'okay with me being gay',
-      'slaying',
+      'slayyy',
       'more closeted than George Washington',
-      'regretting the legalization of same-sex marriage',
+      'legalizing same-sex marriage',
       'the definition of bi-erasure',
-      'a lesbian (lol)',
+      'a dyke',
       'one o\' them raging homosexuals',
-      'the pride month equivalent of The Grinch',
+      'The Grinch but for pride month',
       'a big fan of compulsory homosexuality',
       'livin\' life queer',
-      'banging men',
-      'a twink in the drama class',
+      'getting conversion therapy',
+      'twink marriage',
       'getting pissed at Mardi Gras'
     ]
   },
   {
     'emoji': '🤓',
     'responses': [
-      'factorising the polynomial',
+      'factorising a non-monic derivative',
       'Albert Einstein',
-      'pursuing a career in quantum physics',
-      'reciting pi to at least three digits',
-      'giving nerd emoji right now, I can\'t lie',
+      'pursuing quantum physics',
+      'reciting pi to three digits',
+      'giving major nerd emoji right now, I can\'t lie',
       'gifted',
       'paying off college debt',
       'studying some social skills',
       'a sweaty nerd',
-      'the Kowalski of the class',
-      'calculating the probability that you\'re a twig',
-      'asking for extension questions',
+      'pullin\' a Kowalski',
+      'assessing the probability that you\'re wrong',
+      'asking for extension work',
       'a product of the private education system',
       'Dweeb of the Year',
-      'focusing on math and music, nothing else matters',
+      'calculating',
       'a virgin for life',
-      'mentally divergent at such a young age',
-      'stealing lunch money and paying for assignments',
+      'mentally divergent at such an early age',
+      'stealing our lunch money and paying us for assignments',
       'doing homework',
       'the next Stephen Hawking',
       'a Nobel Prize winner',
@@ -258,7 +449,7 @@ const responses = [ // responseString will break if no. of card packs exceeds 36
   {
     'emoji': '🇬🇷',
     'responses': [
-      'a douchebag Kalymnian',
+      'a stupid Kalymnian',
       'spraying tzatziki everywhere',
       'adding incest to the Olympics',
       'Greece\'s debt collector',
@@ -284,8 +475,78 @@ const responses = [ // responseString will break if no. of card packs exceeds 36
       'down bad for a yiros right about now',
       'daddy\'s little malaka'
     ]
+  },
+  {
+    'emoji': '🔎',
+    'responses': [
+      'conspiracy theories',
+      'in the Illuminati',
+      'the proud owner of a tin foil hat',
+      'reptilian overlords',
+      'caught bleeding out blue blood',
+      'the deep-state',
+      'spying on citizens',
+      'accused of collusion with the Mafia',
+      'simply false',
+      'taking down the shadow government',
+      'a reputable fact-checker',
+      'doing your own research',
+      'a White House inside job',
+      'exactly what they want you to believe',
+      'Hillary Clinton and Bill Gates',
+      'the Unabomber',
+      'a sheeple of the mainstream media',
+      'wire-tapping our calls',
+      'doubting the legitimacy of vaccines',
+      'a \'survivor\' of the September 11 \'attacks\'',
+      'flat earthers from across the globe',
+      'QAnon\'s biggest believer',
+      'selling children\'s blood on the black market',
+      'smashing a 5G modem',
+      'faking the moon landing'
+    ]
+  },
+  {
+    'emoji': '🥀',
+    'responses': [
+      'having an affair',
+      'eager to arrange a divorce',
+      'heartbreak',
+      'a poor victim of temptation',
+      'couped up, caring for a family and whatnot',
+      'a whore',
+      'hooking up with my least kissable ex',
+      'being unfaithful',
+      'getting frisky with the handyman',
+      'a recent widow',
+      '\'Hunky Julio\'',
+      'making my mistress sign an NDA',
+      'cheating',
+      'enjoying a solid hour of pretending I don\'t have a wife',
+      'the dying rose of our marriage',
+      'no-good prostitute scum',
+      'notifying my rebounds about an upcoming job offer',
+      'sexing a married man',
+      'finding a side-fling',
+      'wasting that sexual talent',
+      'a sex scandal',
+      'a home-wrecking wife-stealer',
+      'trying out polyamory',
+      'in a husband-sharing arrangement (apparently)',
+      'conveniently leaving the ring at home'
+    ]
   }
 ]
+
+
+window.onpointermove = event => {
+  const { clientX, clientY } = event;
+
+  dynamicFrameBackground.animate({
+    'backgroundPosition': clientX / 20 + 'px' + ' ' + clientY / 10 + 'px'
+  }, {duration: 2000, fill: "forwards" })
+}
+
 
 // 1. Setup media sources
 
@@ -295,13 +556,12 @@ callButton.onclick = async () => {
   // P A R T  1
 
 
+  successAudio.load()
+  successAudio.play()
 
   joinInput.setAttribute('disabled', true)
   joinButton.setAttribute('disabled', true)
   callButton.setAttribute('disabled', true)
-
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  let remoteStream = new MediaStream();
 
   myId = 0
 
@@ -312,12 +572,12 @@ callButton.onclick = async () => {
     let i = 1
     while (i <= gameState.numRounds) {
 
-      currentString = currentString + Math.floor(Math.random() * Object.keys(responses).length).toString(Object.keys(responses).length)
+      currentString = currentString + Math.floor(Math.random() * Object.keys(responseList).length).toString(Object.keys(responseList).length)
 
       let responsesChosen = []
 
       let j = 1
-      while (j <= 5) {
+      while (j <= 6) {
         
         let newResponse = Math.floor(Math.random() * 25).toString(25)
 
@@ -343,10 +603,8 @@ callButton.onclick = async () => {
   gameState.players[myId] = ({
     id: myId,
     name: 'Host',
-    ready: false,
-    muted: false,
-    response: 0,
-    responsePack: 0,
+    ready: true,
+    responses: [],
     responseString: generateResponseString(),
   })
 
@@ -362,29 +620,34 @@ callButton.onclick = async () => {
   let offerCandidates = await firestore.collection(callDoc, 'offerCandidates');
   let answerCandidates = await firestore.collection(callDoc, 'answerCandidates');
 
-  segmentText.innerText = 'Lobby'
-  spotlightText.innerText = `Waiting for 4 players to join the game.
-Your room code is ` + callId + `.`
-
   gameState.currentRound.segment = 'lobby'
   gameState.currentRound.segmentTitle = 'Lobby'
-  gameState.currentRound.spotlight = `Waiting for 4 players to join the game.
-Your room code is ` + callId + `.`
+  gameState.currentRound.spotlight = 'Your room code is ' + callId + '.'
+
+  segmentText.innerText = 'Lobby'
+  setDynamicFrame(gameState.currentRound)
 
   nameInput.setAttribute('placeholder', 'Host')
 
   leaveButton.removeAttribute('disabled')
-  //muteButton.removeAttribute('disabled')
   nameInput.removeAttribute('disabled')
 
   Object.keys(playerBar.children).forEach((child) => {
     playerBar.children[0].remove()
   })
 
+  let newPlayerDiv = document.createElement('div')
   let newPlayerLabel = document.createElement('p')
   newPlayerLabel.innerText = gameState.players[myId].name
+  newPlayerDiv.appendChild(newPlayerLabel)
+  let newPlayerIndicator = document.createElement('img')
+  newPlayerIndicator.src = '/icons/ready.png'
+  newPlayerIndicator.classList.add('banished')
+  newPlayerIndicator.classList.add('icon')
+  newPlayerDiv.appendChild(newPlayerIndicator)
 
-  playerBar.appendChild(newPlayerLabel)
+  playerBar.appendChild(newPlayerDiv)
+  newPlayerIndicator.classList.remove('banished')
 
   playerBar.classList.remove('banished')
 
@@ -393,247 +656,38 @@ Your room code is ` + callId + `.`
   gameFrame.classList.remove('banished')
 
 
-  function runGame() {
+  window.runGame = function() {
 
     gameState.currentRound.roundNum = 1
-    let promptsChosen = []
 
-    readyButton.classList.remove('banished')
+    promptsChosen = [] // never let roundNum exceed the number of ANY type of prompt
 
-    readyButton.onclick = async () => {
+    playButton.classList.remove('banished')
+
+    playButton.onclick = async () => {
+
+      successAudio.load()
+      successAudio.play()
       
-      readyButton.classList.add('banished')
+      playButton.classList.add('banished')
       runRound()
       
     }
 
-    function runRound() {
+  }
 
-      function constructPromptString(promptType, promptId, responses) {
+  window.runRound = function() {
 
-        let responseStrings = responses
-        
-        if (responses == null) {
-          responseStrings = ['_____', '_____']
-        }
-        
-        let promptString = ''
+    function startTimer() {
+      
+      let timeLeft = gameState.currentRound.timeLeft
 
-        if (promptType == 0) {
-
-          promptString = prompts[promptType].prompts[promptId] + responseStrings[0]
-
-        } else if (promptType == 1) {
-
-          let i = 1
-
-          while (i < prompts[promptType].prompts[promptId].length) {
-
-            promptString = promptString + prompts[promptType].prompts[promptId][i - 1] + responseStrings[i - 1]
-
-            i++
-
-          }
-
-          promptString = promptString + prompts[promptType].prompts[promptId][i - 1]
-          
-        }
-
-        return promptString
-
-      }
-
-      let promptType = Math.floor(Math.random() * prompts.length)
-
-      let promptId = Math.floor(Math.random() * (prompts[promptType].prompts.length))
-
-      while (promptsChosen.find(element => element == promptId)) {
-         
-        promptId = Math.floor(Math.random() * (prompts[promptType].prompts.length))
-
-      }
-
-      promptsChosen.push(promptId)
-
-      let promptString = constructPromptString(promptType, promptId)
-
-      gameState.currentRound.segment = 'prompt'
-      gameState.currentRound.segmentTitle = prompts[promptType].name + ' prompt'
-      gameState.currentRound.spotlight = promptString
-      gameState.currentRound.promptType = promptType
-      gameState.currentRound.promptId = promptId
-      gameState.currentRound.timeLeft = 3
-
-      segmentText.innerText = prompts[promptType].name + ' prompt'
-      spotlightText.innerText = promptString
-
-      responseCard.classList.add('banished')
-
-      let playerList = Object.keys(gameState.players)
-          
-      playerList.forEach(function(key, keyIndex) {
-
-        gameState.players[key].responsePack = 0
-        gameState.players[key].response = 0
-
-      })
-
-      sendToPeers(gameState);
-
-      setTimeout(function() {
-
-        gameState.currentRound.segment = 'response'
-        gameState.currentRound.segmentTitle = 'Response'
-        gameState.currentRound.timeLeft = 15
-
-        segmentText.innerText = 'Response'
-
-        Object.keys(cardFrame.children).forEach((child) => {
-          cardFrame.children[0].remove()
-        })
-
-        let i = 1
-        let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6), Object.keys(responses).length)
-        let responsesChosen = []
-
-        while (i <= 5) {
-
-          let responseId = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6 + i), 25)
-          
-          responsesChosen.push(responseId)
-          
-          let newCard = cardFrame.appendChild(responseCard.cloneNode(true))
-          newCard.removeAttribute('id')
-          newCard.classList.remove('banished')
-          newCard.children[0].innerText = responses[responsePackChosen].responses[responseId]
-          newCard.children[1].innerText = responses[responsePackChosen].emoji
-          newCard.children[2].innerText = ''
-
-          twemoji.parse(newCard.children[1])
-
-          newCard.onclick = async () => {
-
-            Object.keys(newCard.parentElement.children).forEach((child) => {
-
-              newCard.parentElement.children[child].classList.remove('selected')
-              newCard.parentElement.children[child].children[2].innerText = ''
-
-            })
-
-            newCard.classList.add('selected')
-            newCard.children[2].innerText = 'selected'
-
-            gameState.players[myId].responsePack = responsePackChosen + 1
-            gameState.players[myId].response = responseId + 1
-
-          }
-
-          i++
-
-        }
-
-        setTimeout(function() {
-          cardFrame.classList.remove('banished')
-        }, 0)
-
-        sendToPeers(gameState);
-
-        setTimeout(function() {
-
-          let playerList = Object.keys(gameState.players)
-          
-          playerList.forEach(function(key, keyIndex) {
-
-            var player = gameState.players[key]
-
-            setTimeout(function() {
-              
-              gameState.currentRound.segment = 'reveal'
-              gameState.currentRound.segmentTitle = 'Reveal'
-              gameState.currentRound.timeLeft = 6
-              gameState.currentRound.player = player.id
-
-              segmentText.innerText = 'Reveal'
-
-              cardFrame.classList.add('banished')
-
-              responseCard.classList.remove('banished')
-
-              if (player.responsePack == 0 || responses[player.responsePack - 1] === undefined || player.response == 0 || responses[player.responsePack - 1].responses[player.response - 1] === undefined) {
-                let promptString = constructPromptString(promptType, promptId)
-
-                gameState.currentRound.spotlight = promptString
-
-                spotlightText.innerText = promptString                
-                responseText.innerText = 'no response'
-                responseEmoji.innerText = '📄'
-                responseContext.innerText = player.name
-              } else {
-                let promptString = constructPromptString(promptType, promptId, [ responses[player.responsePack - 1].responses[player.response - 1] ])
-
-                gameState.currentRound.spotlight = promptString
-
-                spotlightText.innerText = promptString
-                responseText.innerText = responses[player.responsePack - 1].responses[player.response - 1]
-                responseEmoji.innerText = responses[player.responsePack - 1].emoji
-                responseContext.innerText = player.name
-              }
-
-              twemoji.parse(responseEmoji)
-              
-              sendToPeers(gameState);
-
-            }, 6000 * keyIndex)
-
-          })
-          
-          setTimeout(function() {
-
-            responseCard.classList.add('banished')
-
-            gameState.currentRound.roundNum++
-
-            if (gameState.currentRound.roundNum <= gameState.numRounds) {
-
-              runRound()
-
-            } else {
-
-              gameState.currentRound.segment = 'podium'
-              gameState.currentRound.segmentTitle = 'Podium'
-              gameState.currentRound.timeLeft = 5
-              gameState.currentRound.spotlight = 'The real winner was friendship.'
-
-              segmentText.innerText = 'Podium'
-              spotlightText.innerText = 'The real winner was friendship.'
-
-              // Announce winners or whatever
-
-              sendToPeers(gameState);
-
-              setTimeout(function() {
-
-                disconnectPeers()
-
-                gameFrame.classList.add('banished')
-                disconnectFrame.classList.remove('banished')
-
-              }, 5000)
-
-            }
-
-          }, 6000 * playerList.length)
-
-        }, 15000)
-
-        var timeLeft = 15
-
-        gameState.currentRound.timeLeft = timeLeft
+      setTimeout(() => {
 
         segmentText.classList.add('i')
         segmentText.innerText = gameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
 
-        var timer = setInterval(function() {
+        let timer = setInterval(function() {
 
           timeLeft--
 
@@ -641,16 +695,306 @@ Your room code is ` + callId + `.`
             clearInterval(timer)
             
             segmentText.classList.remove('i')
+            segmentText.innerText = gameState.currentRound.segmentTitle
+
+            gameState.currentRound.timeLeft = 0
+
+            sendToPeers(gameState)
           } else {
             segmentText.innerText = gameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
           }
 
         }, 1000)
 
-      }, 3000)
-    
+      }, 1000)
+
     }
 
+    let promptType = Math.floor(Math.random() * Object.keys(promptList).length)
+
+    let promptId = Math.floor(Math.random() * (promptList[promptType].prompts.length))
+
+    while (promptsChosen.find(element => element.type == promptType && element.id == promptId)) {
+        
+      promptId = Math.floor(Math.random() * (promptList[promptType].prompts.length))
+
+    }
+
+    promptsChosen.push({
+      type: promptType,
+      id: promptId
+    })
+
+    let promptString = constructPromptString(promptType, promptId)
+
+    gameState.currentRound.segment = 'prompt'
+    gameState.currentRound.segmentTitle = promptList[promptType].name + ' prompt'
+    gameState.currentRound.spotlight = promptString
+    var rando = Math.floor(Math.random() * Object.keys(gameState.players).length)
+    console.log(rando)
+    console.log(gameState.players)
+    gameState.currentRound.spotlightTeaser = gameState.players[rando].name
+    gameState.currentRound.promptType = promptType
+    gameState.currentRound.promptId = promptId
+    gameState.currentRound.timeLeft = 3
+
+    segmentText.innerText = promptList[promptType].name + ' prompt'
+
+    if (promptType == 0) {
+      setDynamicFrame(gameState.currentRound, promptList[promptType].prompts[promptId])
+    } else if (promptType == 1) {
+      setDynamicFrame(gameState.currentRound, promptList[promptType].prompts[promptId].description)
+    } else if (promptType == 2) {
+      setDynamicFrame(gameState.currentRound, promptList[promptType].prompts[promptId].setup.join(','))
+    } else if (promptType == 3) {
+      setDynamicFrame(gameState.currentRound, promptList[promptType].prompts[promptId])
+    } else {
+      setDynamicFrame(gameState.currentRound, promptList[promptType].prompts[promptId])
+    }
+
+    Object.keys(spotlightFrame.children).forEach(function(child) {
+      spotlightFrame.children[0].remove()
+    })
+
+    let playerList = Object.keys(gameState.players)
+        
+    playerList.forEach(function(player) {
+
+      gameState.players[player].responses = []
+      gameState.players[player].ready = false
+
+      let peerIndex = Object.keys(gameState.players).indexOf('' + player + '')
+
+      playerBar.children[peerIndex].children[1].classList.add('banished')
+
+    })
+
+    readyButton.setAttribute('disabled', true)
+
+    sendToPeers(gameState);
+
+    startTimer()
+
+    setTimeout(function() {
+
+      gameState.currentRound.segment = 'response'
+      gameState.currentRound.segmentTitle = 'Response'
+      gameState.currentRound.timeLeft = 15
+
+      segmentText.innerText = 'Response'
+
+      Object.keys(cardFrame.children).forEach((child) => {
+        cardFrame.children[0].remove()
+      })
+
+      let i = 1
+      let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(7 * gameState.currentRound.roundNum - 7), Object.keys(responseList).length)
+      let responsesChosen = []
+
+      cardFrame.style.setProperty('--numCards', 0)
+
+      while (i <= 6) {
+
+        let responseId = parseInt((gameState.players[myId].responseString).charAt(7 * gameState.currentRound.roundNum - 7 + i), 25)
+        
+        responsesChosen.push(responseId)
+        
+        let newCard = cardFrame.appendChild(document.createElement('div'))
+        newCard.classList.add('card')
+        newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].responses[responseId]
+        newCard.children[0].classList.add('cardText')
+        newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].emoji
+        newCard.children[1].classList.add('cardEmoji')
+        newCard.appendChild(document.createElement('p')).innerText = ''
+        newCard.children[2].classList.add('cardContext')
+
+        twemoji.parse(newCard.children[1])
+
+        newCard.onclick = async () => {
+
+          neutralAudio.load()
+          neutralAudio.play()
+
+          Object.keys(newCard.parentElement.children).forEach((child) => {
+
+            newCard.parentElement.children[child].classList.remove('selected')
+            newCard.parentElement.children[child].children[2].innerText = ''
+
+          })
+
+          newCard.classList.add('selected')
+          newCard.children[2].innerText = 'selected'
+
+          gameState.players[myId].responses[0] = {
+            card: responseId,
+            pack: responsePackChosen
+          }
+
+        }
+
+        cardFrame.style.setProperty('--numCards', Number(cardFrame.style.getPropertyValue('--numCards')) + 1)
+
+        i++
+
+      }
+
+      setTimeout(function() {
+        cardFrame.classList.remove('banished')
+      }, 0)
+
+      sendToPeers(gameState);
+
+      startTimer()
+      
+      if (gameState.currentRound.promptType == 0) {
+        musicAudio.src = '/sounds/music/upbeat.mp3'            
+      } else if (gameState.currentRound.promptType == 1) {
+        musicAudio.src = '/sounds/music/heavenly.mp3'
+      } else if (gameState.currentRound.promptType == 2) {
+        musicAudio.src = '/sounds/music/gritty.mp3'
+      } else if (gameState.currentRound.promptType == 3) {
+        musicAudio.src = '/sounds/music/lowkey.mp3'
+      } else {
+        musicAudio.src = '/sounds/music/upbeat.mp3'
+      }
+
+      musicAudio.load()
+      musicAudio.play()
+
+      setTimeout(function() {
+
+        let playerList = Object.keys(gameState.players)
+
+        spotlightFrame.style.setProperty('--numCards', 0)
+        
+        playerList.forEach(function(key, keyIndex) {
+
+          var player = gameState.players[key]
+
+          setTimeout(function() {
+            
+            gameState.currentRound.segment = 'reveal'
+            gameState.currentRound.segmentTitle = 'Reveal'
+            gameState.currentRound.timeLeft = 2
+            gameState.currentRound.player = player.id
+            gameState.currentRound.playerName = player.name            
+
+            segmentText.innerText = 'Reveal'
+
+            cardFrame.classList.add('banished')
+
+            let newCard = document.createElement('div')
+            newCard.classList.add('card')
+            newCard.classList.add('responseCard')
+            newCard.classList.add('banished')
+
+            if (player.responses.length == 0 || responseList[player.responses[0].pack] === undefined || responseList[player.responses[0].pack].responses[player.responses[0].card] === undefined) {
+              let promptString = constructPromptString(promptType, promptId)
+
+              gameState.currentRound.spotlight = promptString
+              gameState.currentRound.responses = []
+
+              newCard.appendChild(document.createElement('p')).innerText = 'no response'
+              newCard.children[0].classList.add('cardText')
+              newCard.appendChild(document.createElement('p')).innerText = '📄'
+              newCard.children[1].classList.add('cardEmoji')
+              newCard.appendChild(document.createElement('p')).innerText = player.name
+              newCard.children[2].classList.add('cardContext')
+
+              setDynamicFrame(gameState.currentRound, 'no response')
+            } else {
+              let promptString = constructPromptString(promptType, promptId, [ responseList[player.responses[0].pack].responses[player.responses[0].card] ])
+
+              gameState.currentRound.spotlight = promptString
+              gameState.currentRound.responses = []
+              gameState.currentRound.responses.push({
+                'card': player.responses[0].card,
+                'pack': player.responses[0].pack
+              })
+
+              newCard.appendChild(document.createElement('p')).innerText = responseList[player.responses[0].pack].responses[player.responses[0].card]
+              newCard.children[0].classList.add('cardText')
+              newCard.appendChild(document.createElement('p')).innerText = responseList[player.responses[0].pack].emoji
+              newCard.children[1].classList.add('cardEmoji')
+              newCard.appendChild(document.createElement('p')).innerText = player.name
+              newCard.children[2].classList.add('cardContext')
+
+              setDynamicFrame(gameState.currentRound, responseList[player.responses[0].pack].responses[player.responses[0].card])
+            }
+
+            spotlightFrame.style.setProperty('--numCards', Number(spotlightFrame.style.getPropertyValue('--numCards')) + 1)
+            spotlightFrame.insertBefore(newCard, spotlightFrame.children[0])
+
+            twemoji.parse(newCard.children[1])
+            
+            setTimeout(function() {
+              newCard.classList.remove('banished')
+            }, 0)
+
+            sendToPeers(gameState);
+
+            startTimer()
+
+          }, 3000 * keyIndex)
+
+        })
+        
+        setTimeout(function() {
+
+          gameState.currentRound.roundNum++
+
+          if (gameState.currentRound.roundNum <= gameState.numRounds) {
+
+            playerList.forEach(function(player) {
+
+              gameState.players[player].ready = false
+    
+              let peerIndex = Object.keys(gameState.players).indexOf('' + player + '')
+    
+              playerBar.children[peerIndex].children[1].classList.add('banished')
+    
+            })
+    
+            readyButton.removeAttribute('disabled')
+
+          } else {
+
+            gameState.currentRound.segment = 'podium'
+            gameState.currentRound.segmentTitle = 'Podium'
+            gameState.currentRound.timeLeft = 5
+            gameState.currentRound.spotlight = 'The real winner was friendship.'
+
+            segmentText.innerText = 'Podium'
+            setDynamicFrame(gameState.currentRound)
+
+            Object.keys(spotlightFrame.children).forEach(function(child) {
+              spotlightFrame.children[0].remove()
+            })
+
+            // Announce winners or whatever
+
+            sendToPeers(gameState);
+
+            startTimer()
+
+            setTimeout(function() {
+
+              disconnectPeers()
+
+              preGameFrame.classList.add('banished')
+              gameFrame.classList.add('banished')
+              disconnectFrame.classList.remove('banished')
+
+            }, 6000)
+
+          }
+
+        }, 3000 * playerList.length)
+
+      }, 16000)
+
+    }, 4000)
+  
   }
 
 
@@ -662,23 +1006,9 @@ Your room code is ` + callId + `.`
 
     let newPc = new RTCPeerConnection(servers);
 
-    // Push tracks from local stream to peer connection
-    localStream.getTracks().forEach((track) => {
-      voiceInput = newPc.addTrack(track, localStream);
-    });
-
-    // Pull tracks from remote stream, add to video stream
-    newPc.ontrack = (event) => {
-      event.streams[0].getTracks().forEach((track) => {
-        voiceOutput = remoteStream.addTrack(track);
-      });
-    };
-
-    //outputAudio.srcObject = remoteStream;
-
     // Create channel to send other (non-media) data
 
-    let playerId = Object.keys(gameState.players).length
+    let playerId = gameState.players[Object.keys(gameState.players).length - 1].id + 1
 
     let newChannel = newPc.createDataChannel(playerId);
 
@@ -691,27 +1021,37 @@ Your room code is ` + callId + `.`
         id: playerId,
         name: 'Player ' + (playerId + 1),
         ready: false,
-        muted: false,
-        response: 0,
-        responsePack: 0,
+        responses: [],
         responseString: generateResponseString(),
       })
 
-      if (Object.keys(gameState.players).length >= 4 && gameState.currentRound.segment == 'lobby') {
+      if (Object.keys(gameState.players).length >= minPlayers && gameState.currentRound.segment == 'lobby') {
         
+        let newPlayerDiv = document.createElement('div')
         let newPlayerLabel = document.createElement('p')
         newPlayerLabel.innerText = gameState.players[playerId].name
+        newPlayerDiv.appendChild(newPlayerLabel)
+        let newPlayerIndicator = document.createElement('img')
+        newPlayerIndicator.src = '/icons/ready.png'
+        newPlayerIndicator.classList.add('banished')
+        newPlayerIndicator.classList.add('icon')
+        newPlayerDiv.appendChild(newPlayerIndicator)
 
-        playerBar.appendChild(newPlayerLabel)
-        
-        runGame()
+        playerBar.appendChild(newPlayerDiv)
         
       } else if (gameState.currentRound.segment == 'lobby') {
 
+        let newPlayerDiv = document.createElement('div')
         let newPlayerLabel = document.createElement('p')
         newPlayerLabel.innerText = gameState.players[playerId].name
+        newPlayerDiv.appendChild(newPlayerLabel)
+        let newPlayerIndicator = document.createElement('img')
+        newPlayerIndicator.src = '/icons/ready.png'
+        newPlayerIndicator.classList.add('banished')
+        newPlayerIndicator.classList.add('icon')
+        newPlayerDiv.appendChild(newPlayerIndicator)
 
-        playerBar.appendChild(newPlayerLabel)
+        playerBar.appendChild(newPlayerDiv)
         
         newPeer()
 
@@ -724,55 +1064,33 @@ Your room code is ` + callId + `.`
       
       const parsedGameState = parseGameState(event.data, gameState, playerId)
       
-      sendToPeers(parsedGameState);
+      let allPlayersReadied = true
 
-      if (gameState.players[playerId].muted) { // yes bro, this is correct
-
-        newPc.onnegotiationneeded = async () => { // because this picks up a problem
-
-          if (gameState.players[playerId].muted) {
-
-            let offerDescription = await newPc.createOffer();
-            await newPc.setLocalDescription(offerDescription);
-            
-            let offer = {
-              sdp: offerDescription.sdp,
-              type: offerDescription.type,
-            };
-
-            let callDoc = await firestore.doc(db, "calls", callId)
+      Object.keys(parsedGameState.players).forEach(player => {
         
-            await firestore.setDoc(callDoc, { offer });
-            
-            // disabled the following because each event has an ongoing trigger, seen line 203 and below
-
-            // Listen for remote answer
-            /*callDoc.onSnapshot((snapshot) => {
-              let data = snapshot.data();
-              if (!newPc.currentRemoteDescription && data?.answer) { // On answer
-                let answerDescription = new RTCSessionDescription(data.answer);
-                newPc.setRemoteDescription(answerDescription);
-              }
-            });*/
-
-            // When answered, add candidate to peer connection
-            /*answerCandidates.onSnapshot((snapshot) => {
-              snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                  let candidate = new RTCIceCandidate(change.doc.data());
-                  newPc.addIceCandidate(candidate);
-
-                }
-              });
-            });*/
-
-          }
-
+        if (parsedGameState.players[player].ready == false) {
+          allPlayersReadied = false
         }
 
-      }
-
+      })
+      
       gameState = parsedGameState
+
+      sendToPeers(gameState);
+      
+      if (allPlayersReadied == true && Object.keys(parsedGameState.players).length >= minPlayers && parsedGameState.currentRound.segment == 'lobby') {
+
+        runGame()
+
+      } else if (allPlayersReadied == true && parsedGameState.currentRound.segment == 'reveal' && parsedGameState.currentRound.player == Object.keys(parsedGameState.players).length - 1) {
+
+        runRound()
+
+      } else if (allPlayersReadied == true && Object.keys(parsedGameState.players).length >= minPlayers && parsedGameState.currentRound.segment == 'podium') {
+
+        runGame()
+
+      }
 
     }
 
@@ -850,6 +1168,9 @@ Your room code is ` + callId + `.`
 // 3. Answer the call with the unique ID
 joinButton.onclick = async () => {
 
+  neutralAudio.load()
+  neutralAudio.play()
+
   callId = joinInput.value.toLowerCase().trim();
 
   if (callId != '') {
@@ -864,9 +1185,6 @@ joinButton.onclick = async () => {
     joinButton.setAttribute('disabled', true)
     callButton.setAttribute('disabled', true)
 
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    let remoteStream = new MediaStream();
-
 
 
     // P A R T  2
@@ -878,29 +1196,16 @@ joinButton.onclick = async () => {
     newPc.onconnectionstatechange = async () => {
 
       if (newPc.connectionState == 'disconnected' || newPc.connectionState == 'failed') {
+
+        disconnectPeers()
   
-        newPc.close()
-  
+        preGameFrame.classList.add('banished')
         gameFrame.classList.add('banished')
         disconnectFrame.classList.remove('banished')
   
       }
   
     }
-
-    // Push tracks from local stream to peer connection
-    localStream.getTracks().forEach((track) => {
-      voiceInput = newPc.addTrack(track, localStream);
-    });
-
-    // Pull tracks from remote stream, add to video stream
-    newPc.ontrack = (event) => {
-      event.streams[0].getTracks().forEach((track) => {
-        voiceOutput = remoteStream.addTrack(track);
-      });
-    };
-
-    //outputAudio.srcObject = remoteStream;
 
 
     // Respond to new data channel
@@ -913,10 +1218,6 @@ joinButton.onclick = async () => {
       event.channel.onopen = (event) => {
         peerChannels[0] = hostChannel
         peerConnections[0] = newPc
-        
-        sendToPeers({
-          ready: true
-        });
       }
 
       hostChannel.onmessage = (event) => {
@@ -937,7 +1238,7 @@ joinButton.onclick = async () => {
           nameInput.setAttribute('placeholder', parsedGameState.players[myId].name)
 
           leaveButton.removeAttribute('disabled')
-          //muteButton.removeAttribute('disabled')
+          readyButton.removeAttribute('disabled')
           nameInput.removeAttribute('disabled')
 
           Object.keys(playerBar.children).forEach((child) => {
@@ -945,24 +1246,42 @@ joinButton.onclick = async () => {
           })
           
           newPlayers.forEach((player) => {
+            let newPlayerDiv = document.createElement('div')
             let newPlayerLabel = document.createElement('p')
             newPlayerLabel.innerText = parsedGameState.players[player].name
-          
-            playerBar.appendChild(newPlayerLabel)
+            newPlayerDiv.appendChild(newPlayerLabel)
+            let newPlayerIndicator = document.createElement('img')
+            newPlayerIndicator.src = '/icons/ready.png'
+            newPlayerIndicator.classList.add('banished')
+            newPlayerIndicator.classList.add('icon')
+            newPlayerDiv.appendChild(newPlayerIndicator)
+
+            playerBar.appendChild(newPlayerDiv)
+
+            if (parsedGameState.players[player].ready == true) {
+              newPlayerIndicator.classList.remove('banished')
+            }
           })
         
           playerBar.classList.remove('banished')
-      
           preGameFrame.classList.add('banished')
-      
           gameFrame.classList.remove('banished')
+
+          setDynamicFrame(parsedGameState.currentRound)
 
         } else if (newPlayers.length > prevPlayers.length) {
 
+          let newPlayerDiv = document.createElement('div')
           let newPlayerLabel = document.createElement('p')
           newPlayerLabel.innerText = parsedGameState.players[newPlayers.length - 1].name
+          newPlayerDiv.appendChild(newPlayerLabel)
+          let newPlayerIndicator = document.createElement('img')
+          newPlayerIndicator.src = '/icons/ready.png'
+          newPlayerIndicator.classList.add('banished')
+          newPlayerIndicator.classList.add('icon')
+          newPlayerDiv.appendChild(newPlayerIndicator)
 
-          playerBar.appendChild(newPlayerLabel)
+          playerBar.appendChild(newPlayerDiv)
 
         } else if (newPlayers.length < prevPlayers.length) {
 
@@ -981,100 +1300,204 @@ joinButton.onclick = async () => {
 
             let peerIndex = newPlayers.indexOf(playerId)
 
-            playerBar.children[peerIndex].innerText = parsedGameState.players[playerId].name
+            playerBar.children[peerIndex].children[0].innerText = parsedGameState.players[playerId].name
+
+            if (parsedGameState.players[playerId].ready == true) {
+              playerBar.children[peerIndex].children[1].classList.remove('banished')
+            } else {
+              playerBar.children[peerIndex].children[1].classList.add('banished')
+            }
 
           })
           
         }
 
-        
-        if (parsedGameState.currentRound.segment == 'reveal') {
+        if (parsedGameState.currentRound.segment != gameState.currentRound.segment) {
+
+          if (parsedGameState.currentRound.segment == 'lobby' || parsedGameState.currentRound.segment == 'podium') {
+            readyButton.removeAttribute('disabled')
+
+            setDynamicFrame(parsedGameState.currentRound)
+          } else {
+            readyButton.setAttribute('disabled', true)
+          }
+          
+          if (parsedGameState.currentRound.segment == 'prompt') {
+
+            if (parsedGameState.currentRound.promptType == 0) {
+              setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId])
+            } else if (parsedGameState.currentRound.promptType == 1) {
+              setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId].description)
+            } else if (parsedGameState.currentRound.promptType == 2) {
+              setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId].setup.join(','))
+            } else if (parsedGameState.currentRound.promptType == 3) {
+              setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId])
+            } else {
+              setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId])
+            }
+
+          } else if (parsedGameState.currentRound.segment != 'reveal') {
+
+            spotlightFrame.style.setProperty('--numCards', 0)
+
+          }
+
+        }
+
+        if (parsedGameState.currentRound.segment == 'reveal' && parsedGameState.currentRound.player == Object.keys(parsedGameState.players).length - 1 && !parsedGameState.players[myId].ready) {
+
+          readyButton.removeAttribute('disabled')
+
+        }
+
+        if (parsedGameState.currentRound.timeLeft > 0 && gameState.currentRound.timeLeft != parsedGameState.currentRound.timeLeft) {
+
+          let timeLeft = parsedGameState.currentRound.timeLeft
 
           segmentText.innerText = parsedGameState.currentRound.segmentTitle
-          spotlightText.innerText = parsedGameState.currentRound.spotlight
+
+          setTimeout(() => {
+
+            segmentText.classList.add('i')
+            segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
+  
+            var timer = setInterval(function() {
+
+              timeLeft--
+
+              if (timeLeft <= 0) {
+                clearInterval(timer)
+                
+                segmentText.classList.remove('i')
+                segmentText.innerText = parsedGameState.currentRound.segmentTitle
+              } else {
+                segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
+              }
+
+            }, 1000)
+
+          }, 1000)
+
+        }
+        
+        if (parsedGameState.currentRound.segment == 'reveal' && (gameState.currentRound.segment != 'reveal' || parsedGameState.currentRound.player != gameState.currentRound.player)) {
 
           cardFrame.classList.add('banished')
 
-          responseCard.classList.remove('banished')
-
           let player = parsedGameState.players[parsedGameState.currentRound.player]
 
-          if (player.responsePack == 0 || responses[player.responsePack - 1] === undefined || player.response == 0 || responses[player.responsePack - 1].responses[player.response - 1] === undefined) {
-            responseText.innerText = 'no response'
-            responseEmoji.innerText = '📄'
-            responseContext.innerText = player.name
+          let newCard = document.createElement('div')
+          newCard.classList.add('card')
+          newCard.classList.add('responseCard')
+          newCard.classList.add('banished')
+
+          if (player.responses.length == 0 || responseList[player.responses[0].pack] === undefined || responseList[player.responses[0].pack].responses[player.responses[0].card] === undefined) {
+                       
+            newCard.appendChild(document.createElement('p')).innerText = 'no response'
+            newCard.children[0].classList.add('cardText')
+            newCard.appendChild(document.createElement('p')).innerText = '📄'
+            newCard.children[1].classList.add('cardEmoji')
+            newCard.appendChild(document.createElement('p')).innerText = player.name
+            newCard.children[2].classList.add('cardContext')
+
+            setDynamicFrame(parsedGameState.currentRound, 'no response')
+
           } else {
-            responseText.innerText = responses[player.responsePack - 1].responses[player.response - 1]
-            responseEmoji.innerText = responses[player.responsePack - 1].emoji
-            responseContext.innerText = player.name
+            
+            newCard.appendChild(document.createElement('p')).innerText = responseList[player.responses[0].pack].responses[player.responses[0].card]
+            newCard.children[0].classList.add('cardText')
+            newCard.appendChild(document.createElement('p')).innerText = responseList[player.responses[0].pack].emoji
+            newCard.children[1].classList.add('cardEmoji')
+            newCard.appendChild(document.createElement('p')).innerText = player.name
+            newCard.children[2].classList.add('cardContext')
+
+            setDynamicFrame(parsedGameState.currentRound, responseList[player.responses[0].pack].responses[player.responses[0].card])
+
           }
 
-          twemoji.parse(responseEmoji)
+          spotlightFrame.style.setProperty('--numCards', Number(spotlightFrame.style.getPropertyValue('--numCards')) + 1)
+          spotlightFrame.insertBefore(newCard, spotlightFrame.children[0])
+          
+          twemoji.parse(newCard.children[1])
+
+          setTimeout(function() {
+            newCard.classList.remove('banished')
+          }, 0)
 
         } else if (parsedGameState.currentRound.segment == 'podium') {
 
-          segmentText.innerText = parsedGameState.currentRound.segmentTitle
-          spotlightText.innerText = parsedGameState.currentRound.spotlight
+          Object.keys(spotlightFrame.children).forEach(function(child) {
+            spotlightFrame.children[0].remove()
+          })
 
-          responseCard.classList.add('banished')
-
-        } 
-        
-        if (parsedGameState.currentRound.segment == 'lobby' || parsedGameState.currentRound.segment == 'prompt') {
-
-          responseCard.classList.add('banished')
+        } else if (parsedGameState.currentRound.segment == 'lobby') {
 
           segmentText.innerText = parsedGameState.currentRound.segmentTitle
-          spotlightText.innerText = parsedGameState.currentRound.spotlight
+
+          Object.keys(spotlightFrame.children).forEach(function(child) {
+            spotlightFrame.children[0].remove()
+          })
+
+        } else if (parsedGameState.currentRound.segment == 'prompt') {
+
+          Object.keys(spotlightFrame.children).forEach(function(child) {
+            spotlightFrame.children[0].remove()
+          })
 
         }
 
         if (parsedGameState.currentRound.segment == 'response' && gameState.currentRound.segment != 'response') {
 
-          var timeLeft = 15
-
-          segmentText.classList.add('i')
-          segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
-          spotlightText.innerText = parsedGameState.currentRound.spotlight
-
-          var timer = setInterval(function() {
-
-            timeLeft--
-
-            if (timeLeft <= 0) {
-              clearInterval(timer)
-              
-              segmentText.classList.remove('i')
-            } else {
-              segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
-            }
-
-          }, 1000)
+          if (parsedGameState.currentRound.promptType == 0) {
+            musicAudio.src = '/sounds/music/upbeat.mp3'            
+          } else if (parsedGameState.currentRound.promptType == 1) {
+            musicAudio.src = '/sounds/music/heavenly.mp3'
+          } else if (parsedGameState.currentRound.promptType == 2) {
+            musicAudio.src = '/sounds/music/gritty.mp3'
+          } else if (parsedGameState.currentRound.promptType == 3) {
+            musicAudio.src = '/sounds/music/lowkey.mp3'
+          } else {
+            musicAudio.src = '/sounds/music/upbeat.mp3'
+          }
+          
+          musicAudio.load()
+          musicAudio.play()
 
           Object.keys(cardFrame.children).forEach((child) => {
             cardFrame.children[0].remove()
           })
 
           let i = 1
-          let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6), Object.keys(responses).length)
+          let responsePackChosen = parseInt((parsedGameState.players[myId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7), Object.keys(responseList).length)
           let responsesChosen = []
 
-          while (i <= 5) {
+          let messagePayload = {
+            responses: []
+          }
 
-            let responseId = parseInt((gameState.players[myId].responseString).charAt(6 * gameState.currentRound.roundNum - 6 + i), 25)
+          cardFrame.style.setProperty('--numCards', 0)
+
+          while (i <= 6) {
+
+            let responseId = parseInt((parsedGameState.players[myId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7 + i), 25)
   
             responsesChosen.push(responseId)
             
-            let newCard = cardFrame.appendChild(responseCard.cloneNode(true))
-            newCard.removeAttribute('id')
-            newCard.classList.remove('banished')
-            newCard.children[0].innerText = responses[responsePackChosen].responses[responseId]
-            newCard.children[1].innerText = responses[responsePackChosen].emoji
-            newCard.children[2].innerText = ''
+            let newCard = cardFrame.appendChild(document.createElement('div'))
+            newCard.classList.add('card')
+            newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].responses[responseId]
+            newCard.children[0].classList.add('cardText')
+            newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].emoji
+            newCard.children[1].classList.add('cardEmoji')
+            newCard.appendChild(document.createElement('p')).innerText = ''
+            newCard.children[2].classList.add('cardContext')
 
             twemoji.parse(newCard)
   
             newCard.onclick = async () => {
+
+              neutralAudio.load()
+              neutralAudio.play()
 
               Object.keys(newCard.parentElement.children).forEach((child) => {
 
@@ -1085,13 +1508,17 @@ joinButton.onclick = async () => {
   
               newCard.classList.add('selected')
               newCard.children[2].innerText = 'selected'
-  
-              sendToPeers({
-                responsePack: responsePackChosen + 1,
-                response: responseId + 1
-              })
+              
+              messagePayload.responses[0] = {
+                card: responseId,
+                pack: responsePackChosen
+              }
+
+              sendToPeers(messagePayload)
   
             }
+
+            cardFrame.style.setProperty('--numCards', Number(cardFrame.style.getPropertyValue('--numCards')) + 1)
   
             i++
   
@@ -1101,50 +1528,6 @@ joinButton.onclick = async () => {
             cardFrame.classList.remove('banished')
           }, 0)
 
-        }
-
-
-        if (gameState.players[0] != null) {
-          if (gameState.players[0].muted == true) {
-
-            newPc.onnegotiationneeded = async () => {
-              
-              if (gameState.players[0].muted == true) {
-
-                const offerDescription = await newPc.createOffer();
-                await newPc.setLocalDescription(offerDescription);
-                
-                const offer = {
-                  sdp: offerDescription.sdp,
-                  type: offerDescription.type,
-                };
-            
-                await firestore.setDoc(callDoc, { offer });
-
-                // Listen for remote answer
-                firestore.onSnapshot(callDoc, (snapshot) => {
-                  const data = snapshot.data();
-                  if (!newPc.currentRemoteDescription && data?.answer) { // On answer
-                    const answerDescription = new RTCSessionDescription(data.answer);
-                    newPc.setRemoteDescription(answerDescription);      
-                  }
-                });
-
-                // When answered, add candidate to peer connection
-                firestore.onSnapshot(answerCandidates, (snapshot) => {
-                  snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added') {
-                      const candidate = new RTCIceCandidate(change.doc.data());
-                      newPc.addIceCandidate(candidate);
-                    }
-                  });
-                });
-
-              }
-
-            }
-
-          }
         }
 
         gameState = parsedGameState
@@ -1165,58 +1548,69 @@ joinButton.onclick = async () => {
     };
 
     const callData = (await firestore.getDoc(callDoc)).data();
-    console.log(callData)
     
-    const offerDescription = callData.offer;
+    if (callData == undefined) {
 
-    let sdp = offerDescription.sdp
-    
-    if (sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == majorVersion) {
-      
-      await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+      disconnectPeers()
+
+      preGameFrame.classList.add('banished')
+      gameFrame.classList.add('banished')
+      disconnectFrame.classList.remove('banished')
+
+    } else if (callData) {
           
-      const answerDescription = await newPc.createAnswer();
-      answerDescription.sdp = answerDescription.sdp.replace('s=-', 's=heavy-handed v' + majorVersion)
-      await newPc.setLocalDescription(answerDescription);
+      const offerDescription = callData.offer;
 
-      const answer = {
-        sdp: answerDescription.sdp,
-        type: answerDescription.type,
-      };
+      let sdp = offerDescription.sdp
+      
+      if (sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == majorVersion) {
+        
+        await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+            
+        const answerDescription = await newPc.createAnswer();
+        answerDescription.sdp = answerDescription.sdp.replace('s=-', 's=heavy-handed v' + majorVersion)
+        await newPc.setLocalDescription(answerDescription);
 
-      await firestore.updateDoc(callDoc, { answer });
+        const answer = {
+          sdp: answerDescription.sdp,
+          type: answerDescription.type,
+        };
 
-      firestore.onSnapshot(offerCandidates, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            let data = change.doc.data();
-            newPc.addIceCandidate(new RTCIceCandidate(data));
-          }
+        await firestore.updateDoc(callDoc, { answer });
+
+        firestore.onSnapshot(offerCandidates, (snapshot) => {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+              let data = change.doc.data();
+              newPc.addIceCandidate(new RTCIceCandidate(data));
+            }
+          });
         });
-      });
 
-    } else {
+      } else {
 
-      newPc.close()
+        newPc.close()
 
-      joinInput.removeAttribute('disabled')
-      joinButton.removeAttribute('disabled')
-      callButton.removeAttribute('disabled')
+        joinInput.removeAttribute('disabled')
+        joinButton.removeAttribute('disabled')
+        callButton.removeAttribute('disabled')
 
-      if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == NaN || sdp.substring(sdp.search('heavy-handed') + 15, sdp.search('heavy-handed') + 16) != '.') {
+        if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == NaN || sdp.substring(sdp.search('heavy-handed') + 15, sdp.search('heavy-handed') + 16) != '.') {
 
-        addNotification('This room is running an invalid version.')
+          addNotification('This room is running an invalid version.')
 
-      } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion) {
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion) {
 
-        addNotification('This room is running an older version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Ask the host to update.')
+          addNotification('This room is running an older version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Ask the host to update.')
 
-      } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion) {
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion) {
 
-        addNotification('This room is running a newer version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Please update in order to join.')
+          addNotification('This room is running a newer version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Please update in order to join.')
+
+        }
 
       }
-
+    
     }
 
   }
@@ -1225,110 +1619,125 @@ joinButton.onclick = async () => {
 
 
 
-muteButton.onclick = async () => { // newPc is not right, it's temporary considering mute function is disabled
+readyButton.onclick = async () => {
 
-  if (muteButton.classList.contains('selected')) {
+  neutralAudio.load()
+  neutralAudio.play()
 
-    muteButton.classList.remove('selected')
-    muteButton.innerText = 'Mute'
+  readyButton.setAttribute('disabled', true)
 
-    sendToPeers({
-      muted: false
+  if (myId == 0) {
+
+    gameState.players[myId].ready = true
+    playerBar.children[myId].children[1].classList.remove('banished')
+
+    sendToPeers(gameState);
+
+    let allPlayersReadied = true
+
+    Object.keys(gameState.players).forEach(player => {
+      
+      if (gameState.players[player].ready == false) {
+        allPlayersReadied = false
+      }
+
     })
 
-    // Push tracks from local stream to peer connection
-    localStream.getTracks().forEach((track) => {
-      voiceInput = newPc.addTrack(track, localStream);
-    });
+    if (allPlayersReadied == true && gameState.currentRound.segment == 'reveal' && gameState.currentRound.player == Object.keys(gameState.players).length - 1) {
 
-    const callDoc = await firestore.doc(db, "calls", callId)
-    const answerCandidates = firestore.collection(callDoc, 'answerCandidates');
-    const offerCandidates = firestore.collection(callDoc, 'offerCandidates');
+      runRound()
 
-    newPc.onicecandidate = (event) => {
-      if (event.candidate != null) {
-        let candidate = event.candidate.toJSON()
-        candidate.uid = auth.getAuth().currentUser.uid
-        firestore.addDoc(answerCandidates, candidate);
-      }
-    };
-
-    const callData = (await firestore.get(callDoc)).data();
-
-    const offerDescription = callData.offer;
-    await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
-
-    const answerDescription = await newPc.createAnswer();
-    await newPc.setLocalDescription(answerDescription);
-    
-    const answer = {
-      sdp: answerDescription.sdp,
-      type: answerDescription.type,
-    };
-
-    await firestore.updateDoc(callDoc, { answer });
-
-    firestore.onSnapshot(offerCandidates, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          let data = change.doc.data();
-          //newPc.addIceCandidate(new RTCIceCandidate(data));  just uncomment this when the function is re-opened
-        }
-      });
-    });
-
-    // Unsure why the localStream appears not to reconnect the same way it initally connected.
-    // Could it be that remoteStream has lost connection and must be reconfigured somehow?
+    }
 
   } else {
 
-    muteButton.classList.add('selected')
-    muteButton.innerText = 'Unmute'
-
     sendToPeers({
-      muted: true
+      ready: true
     })
-
-    newPc.removeTrack(voiceInput)
 
   }
 
 }
 
 
-
 nameInput.onkeyup = async (event) => {
 
-  if (event.key == 'Enter') {
+  if (event.key == 'Enter' && nameInput.value.length <= 15 && (nameInput.value).trim() != '') {
+
     if (myId == 0) {
 
-      gameState.players[myId].name = nameInput.value
-      playerBar.children[myId].innerText = nameInput.value
+      gameState.players[myId].name = (nameInput.value).trim()
+      playerBar.children[myId].children[0].innerText = (nameInput.value).trim()
 
       sendToPeers(gameState);
 
     } else {
 
-      playerBar.children[myId].innerText = nameInput.value
-
       sendToPeers({
-        name: nameInput.value
+        name: (nameInput.value).trim()
       })
 
     }
+
+  } else if (event.key == 'Enter') {
+
+    nameInput.value = gameState.players[myId].name
 
   }
   
 }
 
 
-
 dismissButton.onclick = async () => {
+
+  neutralAudio.load()
+  neutralAudio.play()
 
   gameState = initialGameState
 
-  disconnectFrame.classList.add('banished')
   preGameFrame.classList.remove('banished')
+  disconnectFrame.classList.add('banished')
+  
+  joinInput.value = ''
+  joinInput.removeAttribute('disabled')
+  joinButton.removeAttribute('disabled')
+  callButton.removeAttribute('disabled')
+
+  playerBar.classList.add('banished')
+
+  nameInput.setAttribute('placeholder', '')
+
+  leaveButton.setAttribute('disabled', true)
+  readyButton.setAttribute('disabled', true)
+  nameInput.setAttribute('disabled', true)
+
+  Object.keys(spotlightFrame.children).forEach(function(child) {
+    spotlightFrame.children[0].remove()
+  })
+
+}
+
+
+leaveButton.onclick = async () => {
+
+  neutralAudio.load()
+  neutralAudio.play()
+
+  if (myId == 0) {
+
+    disconnectPeers()
+
+  } else {
+
+    disconnectPeers()
+
+  }
+
+  gameState = initialGameState
+
+  preGameFrame.classList.remove('banished')
+  gameFrame.classList.add('banished')
+  disconnectFrame.classList.add('banished')
 
   joinInput.value = ''
   joinInput.removeAttribute('disabled')
@@ -1340,10 +1749,38 @@ dismissButton.onclick = async () => {
   nameInput.setAttribute('placeholder', '')
 
   leaveButton.setAttribute('disabled', true)
-  //muteButton.setAttribute('disabled', true)
+  readyButton.setAttribute('disabled', true)
   nameInput.setAttribute('disabled', true)
 
-  responseCard.classList.add('banished')
+  Object.keys(spotlightFrame.children).forEach(function(child) {
+    spotlightFrame.children[0].remove()
+  })
+
+}
+
+
+muteButton.onclick = async () => {
+
+  if (globalVolume == 0) {
+    
+    neutralAudio.load()
+    neutralAudio.play()
+
+    globalVolume = 1
+
+    muteButton.children[0].setAttribute('src', '/icons/unmuted.png')
+
+  } else {
+
+    globalVolume = 0
+
+    muteButton.children[0].setAttribute('src', '/icons/muted.png')
+
+  }
+
+  successAudio.volume = globalVolume / 20
+  neutralAudio.volume = globalVolume / 20
+  musicAudio.volume = globalVolume / 10
 
 }
 
@@ -1356,44 +1793,36 @@ function parseGameState(data, gameState, playerId) {
   let parsedGameState = wakeObject(gameState)
   
   if (typeof(message.ready) == 'boolean') {
-    
-    parsedGameState.players[playerId].ready = message.ready
-    
-  }
-
-  if (typeof(message.name) == 'string') {
 
     let peerIndex = Object.keys(parsedGameState.players).indexOf('' + playerId + '')
     
-    parsedGameState.players[playerId].name = message.name
-    playerBar.children[peerIndex].innerText = message.name
+    parsedGameState.players[playerId].ready = message.ready
+
+    if (message.ready == true) {
+      playerBar.children[peerIndex].children[1].classList.remove('banished')
+    } else {
+      playerBar.children[peerIndex].children[1].classList.add('banished')
+    }
     
   }
 
-  if (typeof(message.muted) == 'boolean') {
+  if (typeof(message.name) == 'string' && message.name.length <= 15 && message.name.trim() != '') {
+
+    let peerIndex = Object.keys(parsedGameState.players).indexOf('' + playerId + '')
     
-    parsedGameState.players[playerId].muted = message.muted
-
-    /*if (message.muted == true) {
-
-      newPc.ontrack = (event) => {
-        event.streams[0].getTracks().forEach((track) => {
-          voiceOutput = remoteStream.addTrack(track);
-        });
-      };
-
-    }*/
+    parsedGameState.players[playerId].name = (message.name).trim()
+    playerBar.children[peerIndex].children[0].innerText = (message.name).trim()
     
   }
 
-  if (typeof(message.response) == 'number' && gameState.currentRound.segment == 'response') {
+  if (typeof(message.responses) == 'object' && gameState.currentRound.segment == 'response') {
 
     let responseIsValid = false
 
     let i = 1
-    while (i <= 5) {
+    while (i <= 66) {
 
-      if (message.response - 1 == parseInt((parsedGameState.players[playerId].responseString).charAt(6 * parsedGameState.currentRound.roundNum - 6 + i), 25)) {
+      if (message.responses[0].card == parseInt((parsedGameState.players[playerId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7 + i), 25) && message.responses[0].pack == parseInt((gameState.players[playerId].responseString).charAt(7 * gameState.currentRound.roundNum - 7), Object.keys(responseList).length)) {
         responseIsValid = true
       }
       
@@ -1402,15 +1831,9 @@ function parseGameState(data, gameState, playerId) {
     }
     
     if (responseIsValid) {
-      parsedGameState.players[playerId].response = message.response
+      parsedGameState.players[playerId].responses = message.responses
     }
 
-  }
-
-  if (typeof(message.responsePack) == 'number' && gameState.currentRound.segment == 'response' && message.responsePack - 1 == parseInt((parsedGameState.players[playerId].responseString).charAt(6 * parsedGameState.currentRound.roundNum - 6), Object.keys(responses).length)) {
-    
-    parsedGameState.players[playerId].responsePack = message.responsePack
-    
   }
 
   return parsedGameState
@@ -1445,18 +1868,265 @@ function addNotification(message) {
 
 
 
-/* OVERVIEW OF OBSERVATIONS
+function constructPromptString(promptType, promptId, responses) {
 
-  1. Peer connects to host as usual, call established, nothing wrong
+  let responseStrings = responses
+  
+  if (responses == null) {
+    responseStrings = ['_____', '_____']
+  }
+  
+  let promptString = ''
 
-x 2. When host mutes, they fail to send that info to the client and so they are oblivious (and don't print '1b')
+  if (promptType == 0) { // Standard
 
-x 3. First time the host unmutes, the CreateGame function appears to address this NegotiationNeeded and creates offers
+    promptString = promptList[promptType].prompts[promptId] + responseStrings[0]
 
-  4. These offers are answered by the UnmuteButton (as desired, but this means the host is re-negotiating with itself)
+  } else if (promptType == 1) { // Review
 
-  5. The subsequent attempts of the host to unmute seem to answer non-existant offers?
+    promptString = '\"' + promptList[promptType].prompts[promptId].description + '\"'
 
-Address the 'muted' communication failure, stop CreateGame from doing whatever it is doing.
+  } else if (promptType == 2) { // Conversation
 
-*/
+    promptString = promptList[promptType].prompts[promptId].setup.join('\n')
+
+  } else if (promptType == 3) { // Newsflash
+
+    promptString = promptList[promptType].prompts[promptId]
+
+  } else if (promptType == 500) {
+
+    let i = 1
+
+    while (i < promptList[promptType].prompts[promptId].length) {
+
+      promptString = promptString + promptList[promptType].prompts[promptId][i - 1] + responseStrings[i - 1]
+
+      i++
+
+    }
+
+    promptString = promptString + promptList[promptType].prompts[promptId][i - 1]
+    
+  }
+
+  return promptString
+
+}
+
+function setDynamicFrame(currentRound, announcerText) {
+
+  spotlightForeground.classList.add('banished')
+  spotlightDecor.classList.add('banished')
+  spotlightText.classList.add('banished')
+  spotlightContext.classList.add('banished')
+  spotlightContext2.classList.add('banished')
+
+  let spotlightTextElements = document.getElementsByClassName('spotlightTextElement')
+  
+  Object.keys(spotlightTextElements).forEach(index => {
+    spotlightTextElements[index].classList.add('banished')
+  })
+  
+  dynamicFrameBackground.style.backgroundColor = getComputedStyle(dynamicFrameBackground).getPropertyValue('--black')
+  dynamicFrameBackground.style.filter = 'blur(3px)'
+
+  setTimeout(() => {
+    
+    setTimeout(() => {
+      let utterance = new SpeechSynthesisUtterance(announcerText)
+      utterance.rate = 1.5
+      utterance.volume = globalVolume * 0.7
+
+      window.speechSynthesis.speak(utterance)
+    }, 500)
+
+    dynamicFrame.setAttribute('promptType', promptList[currentRound.promptType].name)
+
+    if (currentRound.promptType != 2) {
+
+      Object.keys(spotlightTextElements).forEach(index => {
+        spotlightTextElements[index].remove()
+      })
+
+    }
+
+    spotlightText.innerText = ''
+    spotlightContext.innerText = ''
+    spotlightContext2.innerText = ''
+    spotlightDecor.innerText = ''
+
+    if (currentRound.segment == 'prompt') {
+    
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/0.png', 'https://localhost:3000')
+
+      if (currentRound.promptType == 0 || currentRound.promptType == 500) { // Standard or Dual
+
+        spotlightText.innerText = currentRound.spotlight
+
+      } else if (currentRound.promptType == 1) { // Review
+
+        spotlightText.innerText = currentRound.spotlight + '\n' + '⭐'.repeat(promptList[currentRound.promptType].prompts[currentRound.promptId].rating)
+        spotlightContext.innerText = currentRound.spotlightTeaser + ' says:'
+        spotlightDecor.innerText = currentRound.spotlightTeaser[0]
+
+        twemoji.parse(spotlightText)
+
+      } else if (currentRound.promptType == 2) { // Conversation
+
+        spotlightTextElements = document.getElementsByClassName('spotlightTextElement')
+
+        Object.keys(spotlightTextElements).forEach(index => {
+          spotlightTextElements[0].remove()
+        })
+        
+        let lines = currentRound.spotlight.split(/\r?\n/)
+
+        Object.keys(lines).forEach(line => {
+          
+          let newLine = document.createElement('p')
+          newLine.classList.add('banished')
+          newLine.classList.add('spotlightTextElement')
+          newLine.style.setProperty('--numElements', line)
+
+          newLine.innerText += lines[line]
+
+          dynamicFrameBackground.appendChild(newLine)
+
+        })
+
+        spotlightContext.innerText = currentRound.spotlightTeaser
+        spotlightDecor.innerText = currentRound.spotlightTeaser[0]
+
+      } else if (currentRound.promptType == 3) { // Newsflash
+
+        spotlightText.innerText = '_____'
+        spotlightContext.innerText = currentRound.spotlight
+        spotlightContext2.innerText = currentRound.spotlight
+        spotlightDecor.innerText = currentRound.spotlightTeaser[0]
+
+      }
+
+    } else if (currentRound.segment == 'reveal') {
+
+      let packIdOrZero = 0
+
+      if (currentRound.responses.length != 0) {
+        packIdOrZero = currentRound.responses[0].pack + 1
+      }
+
+      dynamicFrame.setAttribute('promptType', promptList[currentRound.promptType].name)
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/' + packIdOrZero + '.png', 'https://localhost:3000')
+
+      // set spotlightDecor to match card emoji
+
+      if (currentRound.promptType == 0 || currentRound.promptType == 500) { // Standard or Dual
+
+        spotlightText.innerText = currentRound.spotlight
+        spotlightContext.innerText = currentRound.playerName
+
+      } else if (currentRound.promptType == 1) { // Review
+
+        spotlightText.innerText = currentRound.spotlight + '\n' + '⭐'.repeat(promptList[currentRound.promptType].prompts[currentRound.promptId].rating)
+        spotlightContext.innerText = '- ' + currentRound.spotlightTeaser
+        spotlightDecor.innerText = currentRound.spotlightTeaser[0]
+
+        twemoji.parse(spotlightText)
+
+      } else if (currentRound.promptType == 2) { // Conversation
+
+        if (currentRound.responses.length != 0) {
+          spotlightText.innerText = responseList[currentRound.responses[0].pack].responses[currentRound.responses[0].card]
+        } else {
+          spotlightText.innerText = ''
+        }
+
+        spotlightContext.innerText = currentRound.spotlightTeaser
+        spotlightDecor.innerText = currentRound.spotlightTeaser[0]
+
+      } else if (currentRound.promptType == 3) { // Newsflash
+
+        if (currentRound.responses.length != 0) {
+          spotlightText.innerText = responseList[currentRound.responses[0].pack].responses[currentRound.responses[0].card]
+        } else {
+          spotlightText.innerText = '_____'
+        }
+
+        spotlightContext.innerText = currentRound.spotlight
+        spotlightContext2.innerText = currentRound.spotlight
+        spotlightDecor.innerText = currentRound.spotlightTeaser[0]
+
+      }
+
+    } else if (currentRound.segment == 'lobby') {
+
+      dynamicFrame.setAttribute('promptType', 'Standard')
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/0.png', 'https://localhost:3000')
+
+      spotlightText.innerText = currentRound.spotlight
+      spotlightContext.innerText = ''
+      spotlightContext2.innerText = ''
+      spotlightDecor.innerText = ''
+
+    } else if (currentRound.segment == 'podium') {
+
+      dynamicFrame.setAttribute('promptType', 'Standard')
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/0.png', 'https://localhost:3000')
+
+      spotlightText.innerText = currentRound.spotlight
+      spotlightContext.innerText = ''
+      spotlightContext2.innerText = ''
+      spotlightDecor.innerText = ''
+
+    }
+
+    spotlightForeground.classList.remove('banished')
+    spotlightDecor.classList.remove('banished')
+    spotlightContext.classList.remove('banished')
+    spotlightContext2.classList.remove('banished')
+
+    spotlightTextElements = document.getElementsByClassName('spotlightTextElement')
+      
+    Object.keys(spotlightTextElements).forEach(index => {
+      setTimeout(() => {
+        spotlightTextElements[index].classList.remove('banished')
+      }, 500 * index)
+    })
+
+    if (currentRound.promptType == 0 || currentRound.promptType == 500) { // Standard or Dual
+
+      dynamicFrameBackground.style.backgroundColor = getComputedStyle(dynamicFrame).getPropertyValue('--white')
+      dynamicFrameBackground.style.filter = 'none'
+
+      spotlightText.classList.remove('banished')
+
+    } else if (currentRound.promptType == 1) { // Review
+
+      dynamicFrameBackground.style.backgroundColor = getComputedStyle(dynamicFrame).getPropertyValue('--white')
+      dynamicFrameBackground.style.filter = 'none'
+
+      spotlightText.classList.remove('banished')
+
+    } else if (currentRound.promptType == 2) { // Conversation
+
+      dynamicFrameBackground.style.backgroundColor = getComputedStyle(dynamicFrame).getPropertyValue('--white')
+      dynamicFrameBackground.style.filter = 'none'
+
+      setTimeout(() => {
+        spotlightText.classList.remove('banished')
+      }, 1000)
+
+    } else if (currentRound.promptType == 3) { // Conversation
+
+      dynamicFrameBackground.style.backgroundColor = getComputedStyle(dynamicFrame).getPropertyValue('--white')
+      dynamicFrameBackground.style.filter = 'none'
+
+      spotlightText.classList.remove('banished')
+
+    }
+
+    
+
+  }, 300);
+
+}

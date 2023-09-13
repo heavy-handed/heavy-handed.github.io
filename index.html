@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>heavy-handed</title>
     <script type="module" src="/main.js"></script>
@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
   </head>
   <body>
-    <h1>heavy-handed</h1>
+    <h1>¶ heavy-handed</h1>
 
 
     <div class="" id="preGameFrame">
@@ -20,30 +20,56 @@
 
       <h3>Join a room</h3>
       
-      <input id="joinInput" placeholder="room code" autocomplete="off"/>
-      <button id="joinButton">Join</button>
+      <div>
+        <input id="joinInput" placeholder="room code" autocomplete="off"/>
+        <button id="joinButton">
+          <img class="icon" src="/icons/join.png">
+        </button>
+      </div>
 
       <h3>Create a room</h3>
       
       <button id="callButton" class="important">Create</button>
-
+      
     </div>
 
-
+    
     <div class="banished" id="gameFrame">
 
       <h3 id="segmentText">Segment</h3>
-      <p id="spotlightText">Spotlight text</p>
 
-      <div id="spotlightFrame">
-        <div class="card banished" id="responseCard">
-          <p class="cardText">as plain as a template card</p>
-          <p class="cardEmoji">📄</p>
-          <p></p>
+      <div id="segmentFrame">
+        <div id="spotlightFrame">
+        </div>
+        <div id="dynamicFrame" promptType="Standard">
+          <div id="dynamicFrameBackground">
+            <div id="spotlightForeground">
+              <p id="spotlightContext">Spotlight context</p>
+              <p id="spotlightContext2">Spotlight context</p>
+            </div>
+            <div id="spotlightDecor"></div>
+            <p id="spotlightText">Spotlight text</p>
+            
+          </div>
         </div>
       </div>
 
       <div class="banished" id="cardFrame">
+        <div class="card" id="">
+          <p class="cardText">as plain as a template card</p>
+          <p class="cardEmoji">📄</p>
+          <p></p>
+        </div>
+        <div class="card" id="">
+          <p class="cardText">as plain as a template card</p>
+          <p class="cardEmoji">📄</p>
+          <p></p>
+        </div>
+        <div class="card" id="">
+          <p class="cardText">as plain as a template card</p>
+          <p class="cardEmoji">📄</p>
+          <p></p>
+        </div>
         <div class="card" id="">
           <p class="cardText">as plain as a template card</p>
           <p class="cardEmoji">📄</p>
@@ -64,34 +90,47 @@
       <h3>Disconnected</h3>
       <p>You were disconnected from the room</p>
 
-      <button id="dismissButton">Dismiss</button>
+      <button id="dismissButton">
+        <img class="icon" src="/icons/dismiss.png">
+      </button>
 
     </div>
-
-
-    <audio id="outputAudio"></audio>
     
 
     <div id="infoPanel">
 
       <div class="banished infoBar" id="playerBar">
-        <p>Player</p>
+        
       </div>
 
     
       <div class="infoBar" id="controlBar">
         <div class="wrapper">
-          <button id="leaveButton" disabled="true">Leave</button>
-          <button id="muteButton" disabled="true">Mute</button>
+          <button id="leaveButton" disabled="true">
+            <img class="icon" src="/icons/leave.png">
+          </button>
+          <button id="readyButton" disabled="true">
+            <img class="icon" src="/icons/ready.png">
+          </button>
           <input id="nameInput" disabled="true" placeholder="" autocomplete="off"/>
+          <button id="muteButton">
+            <img class="icon" src="/icons/unmuted.png">
+          </button>
         </div>
       </div>
-
+      
     </div>
 
-    <button id="readyButton" class="important banished">Let's play</button>
+
+    <button id="playButton" class="important banished">Let's play</button>
 
     <div id="notificationPanel"></div>
+
+
+    <audio id="successAudio" src="/sounds/success.mp3"></audio>
+    <audio id="neutralAudio" src="/sounds/neutral.mp3"></audio>
+    <audio id="musicAudio" src="/sounds/music/upbeat.mp3" preload="auto"></audio>
+
 
   </body>
 </html>
