@@ -1,6 +1,6 @@
 //
 
-const minPlayers = 5
+const minPlayers = 4
 const numPacks = 7 // responseString will break if no. of card packs exceeds 36
 
 const majorVersion = '0.5'
