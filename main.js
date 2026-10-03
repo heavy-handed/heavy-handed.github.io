@@ -1,14 +1,10 @@
-//
+twemoji.parse(document.body)
 
 const minPlayers = 4
-const numPacks = 7 // responseString will break if no. of card packs exceeds 36
 
-const majorVersion = '0.5'
-const minorVersion = '0'
+const majorVersion = '0.4'
 
 // var is global, let is block scope
-
-twemoji.parse(document.body)
 
 import * as firebase from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
 import * as firestore from 'https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js'
@@ -48,14 +44,9 @@ const servers = {
 
 let callId = null;
 
-let globalVolume = 1
-
-var singleDigits = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+var globalVolume = 1
 
 var promptsChosen = []
-
-let reactionsLogged = {}
-let playerEndorsements = []
 
 let peerConnections = {}
 let peerChannels = {}
@@ -83,9 +74,9 @@ function sendToPeers(data) {
     }
   })
 
-  Object.values(peerChannels).forEach((channel) => {
-    if (channel && channel.readyState == 'open') {
-      channel.send(JSON.stringify(parsedData))
+  Object.keys(peerChannels).forEach((peerId) => {
+    if (peerChannels[peerId] && peerChannels[peerId].readyState == 'open') {
+      peerChannels[peerId].send(JSON.stringify(parsedData))
     }
   })
 
@@ -121,12 +112,8 @@ const initialGameState = {
     player: 0,
     playerName: '',
   },
+  numRounds: 5,
   players: {},
-  gameRules: {
-    votingSystem: 'score',
-    pointsToWin: 4,
-    numRounds: 6
-  }
 };
 
 let gameState = initialGameState
@@ -137,16 +124,14 @@ var myId = null
 const callButton = document.getElementById('callButton');
 const joinInput = document.getElementById('joinInput');
 const joinButton = document.getElementById('joinButton');
+const playButton = document.getElementById('playButton');
 
 const segmentText = document.getElementById('segmentText');
 
 const preGameFrame = document.getElementById('preGameFrame')
 const gameFrame = document.getElementById('gameFrame')
 
-const gameTitle = document.getElementById('gameTitle')
-const gameContext = document.getElementById('gameContext')
-const gameDescription = document.getElementById('gameDescription')
-
+const segmentFrame = document.getElementById('segmentFrame')
 const spotlightFrame = document.getElementById('spotlightFrame')
 const dynamicFrame = document.getElementById('dynamicFrame')
 const dynamicFrameBackground = document.getElementById('dynamicFrameBackground')
@@ -161,32 +146,24 @@ const cardFrame = document.getElementById('cardFrame')
 
 const dismissButton = document.getElementById('dismissButton')
 
-const controlBar = document.getElementById('controlBar')
-const nameText = document.getElementById('nameText')
-const scoreText = document.getElementById('scoreText')
-const roundsLeftText = document.getElementById('roundsLeftText')
+const playerBar = document.getElementById('playerBar')
+
 const leaveButton = document.getElementById('leaveButton');
 const readyButton = document.getElementById('readyButton');
 const nameInput = document.getElementById('nameInput');
 
-const playButton = document.getElementById('playButton');
-
-const interactionPanel = document.getElementById('interactionPanel');
-
-const playerBar = document.getElementById('playerBar')
-
 const notificationPanel = document.getElementById('notificationPanel')
 
 const successAudio = document.getElementById('successAudio')
-const alertAudio = document.getElementById('alertAudio')
 const neutralAudio = document.getElementById('neutralAudio')
 const musicAudio = document.getElementById('musicAudio')
-successAudio.volume = globalVolume / 12
-alertAudio.volume = globalVolume / 12
-neutralAudio.volume = globalVolume / 12
+successAudio.volume = globalVolume / 20
+neutralAudio.volume = globalVolume / 20
 musicAudio.volume = globalVolume / 10
+// add mute functionality
 
 const speech = window.SpeechSynthesis
+
 
 
 const promptList = [
@@ -196,15 +173,15 @@ const promptList = [
       'Industry advocates have criticised ',
       'Is anyone here ',
       'An apartment littered with strangers\' clothes. Day in the life of ',
-      'If I\'m not Canadian, the President of the United States isn\'t ',
-      'My dad is sceptical of the science behind ',
+      'The President of the United States is ',
+      'My dad is skeptical of the science behind ',
       'What\'s life without ',
       'Yikes. The office is in urgent need of ',
       'I\'ve travelled back in time to stop ',
       'I\'m not ill, I\'m simply ',
       'Took a trip to Timbuktu. My favourite thing? The bit where I was ',
       'Ugh, what\'s that smell? Someone\'s ',
-      '1944 was a year of ',
+      '1944, a year of ',
       'Shakespeare was no artist. He was merely ',
       'Times are tough, but at least I\'m not ',
       'Sorry to inform you, but you\'re ',
@@ -232,10 +209,7 @@ const promptList = [
       'When life gives you lemons, lemons give you ',
       'This great nation can\'t deal with any more ',
       'That\'s surprising! This time the villain wasn\'t ',
-      'Yes, you got a promotion. But why would I be jealous? I\'m ',
-      'Nicole loves ',
-      'I pray he\'s ',
-      'Pssshhhh. That\'s about as likely as ',
+      'Yes, you got a raise. But why would I be jealous? I\'m ',
     ]
   },
   {
@@ -271,7 +245,7 @@ const promptList = [
       },
       {
         'rating': 2,
-        'description': 'Terrible surprise birthday gift, take it from me.'
+        'description': 'Terrible birthday surprise (in my own personal experience).'
       },
       {
         'rating': 4,
@@ -290,15 +264,15 @@ const promptList = [
         'description': 'What the freak, dude.'
       },
       {
-        'rating': 4,
+        'rating': 5,
         'description': 'Now this is something I can wholeheartedly support!'
       },
       {
-        'rating': 5,
+        'rating': 4,
         'description': 'As a vegan, I give this my full endorsement.'
       },
       {
-        'rating': 2,
+        'rating': 3,
         'description': 'Mid...'
       },
       {
@@ -307,31 +281,11 @@ const promptList = [
       },
       {
         'rating': 3,
-        'description': 'Good enough for Hollywood, good enough for me.'
+        'description': 'Good enough for the White House, good enough for me.'
       },
       {
         'rating': 5,
         'description': 'Finally! Some fun for the entire family.'
-      },
-      {
-        'rating': 5,
-        'description': 'This is GOATED!!'
-      },
-      {
-        'rating': 4,
-        'description': 'In my opinion, massively underrated.'
-      },
-      {
-        'rating': 3,
-        'description': 'Gargantuan.'
-      },
-      {
-        'rating': 3,
-        'description': 'Ha, imagine that! What a world.'
-      },
-      {
-        'rating': 5,
-        'description': 'Had an absolute whale of a time.'
       },
     ]
   },
@@ -379,85 +333,16 @@ const promptList = [
       },
       {
         'setup': [
-          'Jessie.',
+          'Jerry.',
           'You weren\'t at school today, my sweet.',
           'What were you doing?!?',
           'Love from Mum. <3'
         ]
       },
-      {
-        'setup': [
-          'met ur bf today',
-          'he was stuttering all over...',
-          'why was he nervous around me??'
-        ]
-      },
-      {
-        'setup': [
-          'i can see this absolute JOCK',
-          'how do I get his attention'
-        ]
-      },
-      {
-        'setup': [
-          'Dad, I can\'t live here anymore.',
-          'Give me one good reason I shouldn\'t flee to Australia.'
-        ]
-      },
-      {
-        'setup': [
-          'Hey, this is Sam.',
-          'I had my appointment yesterday.',
-          'What\'s my diagnosis?'
-        ]
-      },
-      {
-        'setup': [
-          'why won\'t you return my calls'
-        ]
-      },
-      {
-        'setup': [
-          'i\'ve sent the ransom email.',
-          'they\'ll send us the money.',
-          'cause you know what will happen if they don\'t, right?'
-        ]
-      },
-      {
-        'setup': [
-          'PLEASE HELP.',
-          'i think there\'s an INTRUDER in my house.',
-          'what\'s my best option?'
-        ]
-      },
-      {
-        'setup': [
-          'Alex, what\'s this \'C.P.\' folder on your desktop?'
-        ]
-      },
-      {
-        'setup': [
-          'Okay team,',
-          'time for another icebreaker game!',
-          'Ready for your question? Okay!',
-          'What\'s one thing that never gets old...'
-        ]
-      },
-      {
-        'setup': [
-          'This is your job agent.',
-          'If you were to describe your value as an employee, what would you say?'
-        ]
-      },
-      {
-        'setup': [
-          'What\'s on your mind?'
-        ]
-      },
     ]
   },
   {
-    'name': 'Newsflash', // promptType = 3
+    'name': 'Newsflash',
     'prompts': [
       'Cities in chaos as thousands flee',
       'Middle East tensions increased after unexpected aggression',
@@ -467,24 +352,14 @@ const promptList = [
       'Coming up: Another political scandal',
       'Critics calling it a \'huge step backwards\'',
       'Listeners raving after Taylor Swift drops new single',
-      'New movement on the rise',
+      'The next big religion?',
       'Protestors are armed and angry - and this is why',
-      'Anonymous cyber criminal tells all',
+      'Black-listed cyber criminal tells all',
       'Suspect claims she wanted to save innocent lives',
       'Book launched during mental health week',
       'Police say a lack of discipline is to blame',
       'New targets \'unachievable\' says spokesperson',
-      'China closes border due to rapid increases',
-      'Biggest success in \'Egyptian history\'',
-      '97% approval rating, report reveals',
-      'Newsflash: totally overrated',
-      '8 topics inappropriate for this day and age'
-    ]
-  },
-  /*{
-    'name': 'Social', // promptType = 4
-    'prompts': [
-      'Worst cinematic moment of the year!'
+      'China closes border due to rapid increases'
     ]
   }
   /*{
@@ -510,21 +385,158 @@ const promptList = [
 ]
 
 
-const responseList = []
-
-for (let i = 0; i < numPacks; i++) {
-
-  fetch('packs/' + i + '.json').then(response => {
-    
-    response.json().then(response => {
-
-      responseList[i] = response[0]
-
-    })
-    
-  })
-
-}
+const responseList = [ // responseString will break if no. of card packs exceeds 36
+  {
+    'emoji': '🏳️‍🌈',
+    'responses': [
+      'gay',
+      'a skittle, a poof, and a bumboy',
+      'being homophobic',
+      'pride month pizazz',
+      'a colourful word which rhymes with maggot',
+      'coming out in a nursing home',
+      'an LGBTQ rights activist',
+      'that kid who has two dads for some reason',
+      'an avid viewer of lesbian porn',
+      'a hard-line \'no\' voter',
+      'pansexual (attracted to cooking appliances)',
+      'a tad fruity',
+      'okay with me being gay',
+      'slayyy',
+      'more closeted than George Washington',
+      'legalizing same-sex marriage',
+      'the definition of bi-erasure',
+      'a dyke',
+      'one o\' them raging homosexuals',
+      'The Grinch but for pride month',
+      'a big fan of compulsory homosexuality',
+      'livin\' life queer',
+      'getting conversion therapy',
+      'twink marriage',
+      'getting pissed at Mardi Gras'
+    ]
+  },
+  {
+    'emoji': '🤓',
+    'responses': [
+      'factorising a non-monic derivative',
+      'Albert Einstein',
+      'pursuing quantum physics',
+      'reciting pi to three digits',
+      'giving major nerd emoji right now, I can\'t lie',
+      'gifted',
+      'paying off college debt',
+      'studying some social skills',
+      'a sweaty nerd',
+      'pullin\' a Kowalski',
+      'assessing the probability that you\'re wrong',
+      'asking for extension work',
+      'a product of the private education system',
+      'Dweeb of the Year',
+      'calculating',
+      'a virgin for life',
+      'mentally divergent at such an early age',
+      'stealing our lunch money and paying us for assignments',
+      'doing homework',
+      'the next Stephen Hawking',
+      'a Nobel Prize winner',
+      'Mayor of Dorktopia',
+      'hanging out in the bully-free zone',
+      'gettin\' schooled',
+      'one of our greatest minds'
+    ]
+  },
+  {
+    'emoji': '🇬🇷',
+    'responses': [
+      'a stupid Kalymnian',
+      'spraying tzatziki everywhere',
+      'adding incest to the Olympics',
+      'Greece\'s debt collector',
+      'certified Greek, seven days a week',
+      'grillin\' and chillin\'',
+      'shouting \'Eureka\' and running nude down the street',
+      'the godfather of democracy',
+      'Aristotle',
+      'sailing to Athens for an orgy',
+      'fantasising over calamari rings',
+      'inventing democracy, then giving it to the male elite',
+      'the owner of a construction company',
+      'a good-for-nothing wog',
+      'pretending that a bunch of little islands is a \'country\'',
+      'Hercules',
+      'doing the Macarena',
+      'smoking my souvlaki',
+      'strong Greek sperm',
+      'a matter of Greek mythology',
+      'penetrating Troy with a horse',
+      'better than the Turkish',
+      'an aspiring carpenter',
+      'down bad for a yiros right about now',
+      'daddy\'s little malaka'
+    ]
+  },
+  {
+    'emoji': '🔎',
+    'responses': [
+      'conspiracy theories',
+      'in the Illuminati',
+      'the proud owner of a tin foil hat',
+      'reptilian overlords',
+      'caught bleeding out blue blood',
+      'the deep-state',
+      'spying on citizens',
+      'accused of collusion with the Mafia',
+      'simply false',
+      'taking down the shadow government',
+      'a reputable fact-checker',
+      'doing your own research',
+      'a White House inside job',
+      'exactly what they want you to believe',
+      'Hillary Clinton and Bill Gates',
+      'the Unabomber',
+      'a sheeple of the mainstream media',
+      'wire-tapping our calls',
+      'doubting the legitimacy of vaccines',
+      'a \'survivor\' of the September 11 \'attacks\'',
+      'flat earthers from across the globe',
+      'QAnon\'s biggest believer',
+      'selling children\'s blood on the black market',
+      'smashing a 5G modem',
+      'faking the moon landing'
+    ]
+  },
+  {
+    'emoji': '🥀',
+    'responses': [
+      'having an affair',
+      'eager to arrange a divorce',
+      'heartbreak',
+      'a poor victim of temptation',
+      'couped up, caring for a family and whatnot',
+      'a whore',
+      'hooking up with my least kissable ex',
+      'being unfaithful',
+      'getting frisky with the handyman',
+      'a recent widow',
+      '\'Hunky Julio\'',
+      'making my mistress sign an NDA',
+      'cheating',
+      'enjoying a solid hour of pretending I don\'t have a wife',
+      'the dying rose of our marriage',
+      'no-good prostitute scum',
+      'notifying my rebounds about an upcoming job offer',
+      'sexing a married man',
+      'finding a side-fling',
+      'wasting that sexual talent',
+      'a sex scandal',
+      'a home-wrecking wife-stealer',
+      'trying out polyamory',
+      'in a husband-sharing arrangement (apparently)',
+      'conveniently leaving the ring at home'
+    ]
+  }
+]
 
 
 window.onpointermove = event => {
@@ -543,6 +555,7 @@ callButton.onclick = async () => {
 
   // P A R T  1
 
+
   successAudio.load()
   successAudio.play()
 
@@ -550,12 +563,14 @@ callButton.onclick = async () => {
   joinButton.setAttribute('disabled', true)
   callButton.setAttribute('disabled', true)
 
+  myId = 0
+
   function generateResponseString() {
 
     let currentString = ''
 
     let i = 1
-    while (i <= 100) { // responseString will break if no. of rounds exceeds 100
+    while (i <= gameState.numRounds) {
 
       currentString = currentString + Math.floor(Math.random() * Object.keys(responseList).length).toString(Object.keys(responseList).length)
 
@@ -585,16 +600,12 @@ callButton.onclick = async () => {
 
   }
 
-  myId = 0
-
-  gameState.players[myId] = ({ // reset literally everything each game (when implementing multi-game sessions) (use InitialGameState)
+  gameState.players[myId] = ({
     id: myId,
     name: 'Host',
     ready: true,
     responses: [],
     responseString: generateResponseString(),
-    endorsements: {},
-    votingScore: 0,
   })
 
   // Reference Firestore collections for signaling
@@ -616,50 +627,29 @@ callButton.onclick = async () => {
   segmentText.innerText = 'Lobby'
   setDynamicFrame(gameState.currentRound)
 
-  nameText.innerText = 'Host'
+  nameInput.setAttribute('placeholder', 'Host')
 
-  if (gameState.gameRules.votingSystem == 'score') {
-    scoreText.innerText = '0'
-    roundsLeftText.innerText = 'Most endorsements after ' + gameState.gameRules.numRounds + ' rounds wins'
-  } else if (gameState.gameRules.votingSystem == 'quota') {
-    scoreText.innerText = '0'
-    roundsLeftText.innerText = 'First to ' + gameState.gameRules.pointsToWin + 'pts wins'
-  }
-
-  nameInput.placeholder = 'Host'
   leaveButton.removeAttribute('disabled')
   nameInput.removeAttribute('disabled')
-
-  controlBar.classList.add('opened')
 
   Object.keys(playerBar.children).forEach((child) => {
     playerBar.children[0].remove()
   })
 
-  let newPlayerMarker = document.createElement('div')
-  newPlayerMarker.classList.add('playerMarker')
-  let newPlayerIcon = document.createElement('p')
-  newPlayerIcon.innerText = gameState.players[myId].name[0]
-  newPlayerMarker.appendChild(newPlayerIcon)
+  let newPlayerDiv = document.createElement('div')
   let newPlayerLabel = document.createElement('p')
   newPlayerLabel.innerText = gameState.players[myId].name
-  newPlayerMarker.appendChild(newPlayerLabel)
-
+  newPlayerDiv.appendChild(newPlayerLabel)
   let newPlayerIndicator = document.createElement('img')
-  if (!document.documentElement.classList.contains('dev')) {
-    newPlayerIndicator.src = '/icons/ready.png'
-  } else {
-    newPlayerIndicator.src = '/icons/ready2.png'
-  }
+  newPlayerIndicator.src = '/icons/ready.png'
   newPlayerIndicator.classList.add('banished')
   newPlayerIndicator.classList.add('icon')
-  newPlayerMarker.appendChild(newPlayerIndicator)
+  newPlayerDiv.appendChild(newPlayerIndicator)
 
-  playerBar.appendChild(newPlayerMarker)
+  playerBar.appendChild(newPlayerDiv)
   newPlayerIndicator.classList.remove('banished')
 
   playerBar.classList.remove('banished')
-  playerBar.classList.add('opened')
 
   preGameFrame.classList.add('banished')
 
@@ -716,7 +706,7 @@ callButton.onclick = async () => {
 
         }, 1000)
 
-      }, 800)
+      }, 1000)
 
     }
 
@@ -772,12 +762,9 @@ callButton.onclick = async () => {
 
       let peerIndex = Object.keys(gameState.players).indexOf('' + player + '')
 
-      playerBar.children[peerIndex].children[2].classList.add('banished')
+      playerBar.children[peerIndex].children[1].classList.add('banished')
 
     })
-
-    controlBar.classList.remove('opened')
-    playerBar.classList.remove('opened')
 
     readyButton.setAttribute('disabled', true)
 
@@ -793,13 +780,13 @@ callButton.onclick = async () => {
 
       segmentText.innerText = 'Response'
 
-      let i = 1
-      let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(7 * gameState.currentRound.roundNum - 7), Object.keys(responseList).length)
-      let responsesChosen = []
-
       Object.keys(cardFrame.children).forEach((child) => {
         cardFrame.children[0].remove()
       })
+
+      let i = 1
+      let responsePackChosen = parseInt((gameState.players[myId].responseString).charAt(7 * gameState.currentRound.roundNum - 7), Object.keys(responseList).length)
+      let responsesChosen = []
 
       cardFrame.style.setProperty('--numCards', 0)
 
@@ -842,7 +829,7 @@ callButton.onclick = async () => {
 
         }
 
-        cardFrame.style.setProperty('--numCards', 6)
+        cardFrame.style.setProperty('--numCards', Number(cardFrame.style.getPropertyValue('--numCards')) + 1)
 
         i++
 
@@ -873,145 +860,9 @@ callButton.onclick = async () => {
 
       setTimeout(function() {
 
+        let playerList = Object.keys(gameState.players)
+
         spotlightFrame.style.setProperty('--numCards', 0)
-
-        Object.keys(interactionPanel.children).forEach((child) => {
-          interactionPanel.children[0].remove()
-        })
-
-        reactionsLogged = {}
-
-        let playerCount = Object.keys(gameState.players).length
-
-        Object.keys(gameState.players).forEach(function(playerId) {
-          
-          gameState.players[playerId].endorsements = {}
-
-          let playerResponses = gameState.players[playerId].responses
-
-          if (playerResponses.length == 0 || responseList[playerResponses[0].pack] === undefined || responseList[playerResponses[0].pack].responses[playerResponses[0].card] === undefined) {
-
-            let newInteraction = interactionPanel.appendChild(document.createElement('button'))
-            newInteraction.classList.add('interaction')
-            newInteraction.classList.add('important')
-            newInteraction.innerText = (parseInt(playerId) + 1) + '📄'
-
-            twemoji.parse(newInteraction)
-
-            newInteraction.onclick = async () => {
-
-              if (!newInteraction.classList.contains('simulatedActive')) {
-                
-                successAudio.load()
-                successAudio.play()
-
-                newInteraction.classList.add('simulatedActive')
-                
-                if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.add('selected')
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = 'endorsed'
-        
-                }
-                
-                logReaction(myId, 0)
-
-                gameState.players[myId].endorsements[playerId] = 5
-
-              } else {
-
-                alertAudio.load()
-                alertAudio.play()
-
-                newInteraction.classList.remove('simulatedActive')
-
-                if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.remove('selected')
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = gameState.players[playerId].name
-        
-                }
-
-                reactionsLogged[playerId] = 0
-
-                gameState.players[myId].endorsements[playerId] = 0
-
-              }
-
-              sendToPeers(gameState)
-
-            }
-
-          } else {
-            
-            let newInteraction = interactionPanel.appendChild(document.createElement('button'))
-            newInteraction.classList.add('interaction')
-            newInteraction.classList.add('important')
-            newInteraction.innerText = (parseInt(playerId) + 1) + responseList[playerResponses[0].pack].emoji
-
-            twemoji.parse(newInteraction)
-
-            newInteraction.onclick = async () => {
-
-              if (!newInteraction.classList.contains('simulatedActive')) {
-                
-                successAudio.load()
-                successAudio.play()
-
-                newInteraction.classList.add('simulatedActive')
-                console.log()
-                console.log((playerCount - parseInt(playerId)))
-                if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-                  console.log(spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))])
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.add('selected')
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = 'endorsed'
-        
-                }
-                
-                logReaction(myId, playerResponses[0].pack + 1)
-
-                gameState.players[myId].endorsements[playerId] = 5
-
-              } else {
-
-                alertAudio.load()
-                alertAudio.play()
-
-                newInteraction.classList.remove('simulatedActive')
-
-                if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.remove('selected')
-                  spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = gameState.players[playerId].name
-        
-                }
-
-                reactionsLogged[playerId] = 0
-
-                gameState.players[myId].endorsements[playerId] = 0
-
-              }
-
-              sendToPeers(gameState)
-
-            }
-
-          }
-
-        })
-
-        setTimeout(function() {
-          interactionPanel.classList.remove('banished')
-        }, 0)
-
-        let playerList = Object.keys(gameState.players).reverse()
-
-        gameState.currentRound.segment = 'voting'
-        gameState.currentRound.segmentTitle = 'Voting'
-        gameState.currentRound.spotlight = 'Select your favourite responses from this round'
-        gameState.currentRound.timeLeft = 3 * playerList.length + 5
-        
-        segmentText.innerText = 'Voting'
         
         playerList.forEach(function(key, keyIndex) {
 
@@ -1019,8 +870,13 @@ callButton.onclick = async () => {
 
           setTimeout(function() {
             
+            gameState.currentRound.segment = 'reveal'
+            gameState.currentRound.segmentTitle = 'Reveal'
+            gameState.currentRound.timeLeft = 2
             gameState.currentRound.player = player.id
-            gameState.currentRound.playerName = player.name
+            gameState.currentRound.playerName = player.name            
+
+            segmentText.innerText = 'Reveal'
 
             cardFrame.classList.add('banished')
 
@@ -1063,11 +919,6 @@ callButton.onclick = async () => {
               setDynamicFrame(gameState.currentRound, responseList[player.responses[0].pack].responses[player.responses[0].card])
             }
 
-            if (interactionPanel.children[player.id].classList.contains('simulatedActive')) {
-              newCard.classList.add('selected')
-              newCard.children[2].innerText = 'endorsed'
-            }
-
             spotlightFrame.style.setProperty('--numCards', Number(spotlightFrame.style.getPropertyValue('--numCards')) + 1)
             spotlightFrame.insertBefore(newCard, spotlightFrame.children[0])
 
@@ -1079,185 +930,63 @@ callButton.onclick = async () => {
 
             sendToPeers(gameState);
 
+            startTimer()
+
           }, 3000 * keyIndex)
 
         })
-
-        startTimer()
         
         setTimeout(function() {
 
-          interactionPanel.classList.add('banished')
+          gameState.currentRound.roundNum++
 
-          let weightedVotes = weightVotes(gameState)
+          if (gameState.currentRound.roundNum <= gameState.numRounds) {
 
-          Object.keys(weightedVotes).forEach(playerId => {
-            gameState.players[playerId].votingScore += weightedVotes[playerId]
-            gameState.players[playerId].endorsements = {}
-          })
+            playerList.forEach(function(player) {
 
-          sendToPeers(gameState);
+              gameState.players[player].ready = false
+    
+              let peerIndex = Object.keys(gameState.players).indexOf('' + player + '')
+    
+              playerBar.children[peerIndex].children[1].classList.add('banished')
+    
+            })
+    
+            readyButton.removeAttribute('disabled')
 
-          if (gameState.gameRules.votingSystem == 'score') {
+          } else {
 
-            let currentLeader = 0
+            gameState.currentRound.segment = 'podium'
+            gameState.currentRound.segmentTitle = 'Podium'
+            gameState.currentRound.timeLeft = 5
+            gameState.currentRound.spotlight = 'The real winner was friendship.'
 
-            Object.values(gameState.players).forEach(player => {
+            segmentText.innerText = 'Podium'
+            setDynamicFrame(gameState.currentRound)
 
-              if (player.votingScore > gameState.players[currentLeader].votingScore) {
-                currentLeader = player.id
-              }
-
+            Object.keys(spotlightFrame.children).forEach(function(child) {
+              spotlightFrame.children[0].remove()
             })
 
-            Object.keys(gameState.players).forEach(playerId => {
+            // Announce winners or whatever
 
-              let peerIndex = Object.keys(gameState.players).indexOf(playerId)
+            sendToPeers(gameState);
 
-              if (gameState.players[currentLeader].votingScore == 0) {
+            startTimer()
 
-                playerBar.children[peerIndex].style.setProperty('--percentageOfLeadersPoints', '100%')
-      
-              } else {
+            setTimeout(function() {
 
-                playerBar.children[peerIndex].style.setProperty('--percentageOfLeadersPoints', (Math.round(gameState.players[playerId].votingScore / gameState.players[currentLeader].votingScore * 100)).toString() + '%')
-              
-              }
+              disconnectPeers()
 
-              if (playerId == myId) {
-                scoreText.innerText = gameState.players[playerId].votingScore
-              }
+              preGameFrame.classList.add('banished')
+              gameFrame.classList.add('banished')
+              disconnectFrame.classList.remove('banished')
 
-            })
-
-            roundsLeftText.innerText = (gameState.gameRules.numRounds - gameState.currentRound.roundNum) + ' rounds to go'
-
-          } else if (gameState.gameRules.votingSystem == 'quota') {
-
-            Object.keys(gameState.players).forEach(playerId => {
-
-              let peerIndex = Object.keys(gameState.players).indexOf(playerId)
-
-              playerBar.children[peerIndex].style.setProperty('--percentageOfLeadersPoints', (gameState.players[playerId].votingScore / gameState.gameRules.pointsToWin * 100).toString() + '%')
-
-              if (playerId == myId) {
-                scoreText.innerText = gameState.players[playerId].votingScore
-              }
-              
-            })
-
-            roundsLeftText.innerText = 'out of ' + gameState.gameRules.pointsToWin + 'pts to win'
+            }, 6000)
 
           }
 
-          controlBar.classList.add('opened')
-          playerBar.classList.add('opened')
-          
-          setTimeout(function() {
-
-            gameState.currentRound.roundNum++
-
-            let highestScore = 0
-
-            Object.keys(gameState.players).forEach(function(player) {
-
-              if (gameState.players[highestScore].votingScore < gameState.players[player].votingScore) {
-                highestScore = player
-              }
-
-            })
-
-            if (gameState.gameRules.votingSystem == 'score' && gameState.currentRound.roundNum <= gameState.gameRules.numRounds) {
-
-              gameState.currentRound.segment = 'reveal'
-              gameState.currentRound.segmentTitle = 'Reveal'
-              gameState.currentRound.spotlight = ''
-              gameState.currentRound.timeLeft = 0
-
-              segmentText.innerText = 'Reveal'
-
-              playerList.forEach(function(player) {
-
-                gameState.players[player].ready = false
-      
-                let peerIndex = Object.keys(gameState.players).indexOf('' + player + '')
-      
-                playerBar.children[peerIndex].children[2].classList.add('banished')
-      
-              })
-      
-              readyButton.removeAttribute('disabled')
-
-              sendToPeers(gameState);
-
-            } else if (gameState.gameRules.votingSystem == 'quota' && gameState.players[highestScore].votingScore < gameState.gameRules.pointsToWin) {
-              
-              gameState.currentRound.segment = 'reveal'
-              gameState.currentRound.segmentTitle = 'Reveal'
-              gameState.currentRound.spotlight = ''
-              gameState.currentRound.timeLeft = 0
-
-              segmentText.innerText = 'Reveal'
-
-              playerList.forEach(function(player) {
-
-                gameState.players[player].ready = false
-      
-                let peerIndex = Object.keys(gameState.players).indexOf('' + player + '')
-      
-                playerBar.children[peerIndex].children[2].classList.add('banished')
-      
-              })
-      
-              readyButton.removeAttribute('disabled')
-
-              sendToPeers(gameState);
-
-            } else {
-              
-              Object.keys(spotlightFrame.children).forEach(function(child) {
-                spotlightFrame.children[0].remove()
-              })
-
-              gameState.currentRound.segment = 'podium'
-              gameState.currentRound.segmentTitle = 'Podium'
-              gameState.currentRound.timeLeft = 5
-
-              if (gameState.gameRules.votingSystem == 'score') {
-                gameState.currentRound.spotlight = gameState.players[highestScore].name + ' is the winner.'
-              } else if (gameState.gameRules.votingSystem == 'quota') {
-                gameState.currentRound.spotlight = gameState.players[highestScore].name + ' is the winner.'
-              }
-
-              segmentText.innerText = 'Podium'
-
-              // Announce winners or whatever
-              
-              setDynamicFrame(gameState.currentRound)
-
-              sendToPeers(gameState);
-
-              startTimer()
-
-              setTimeout(function() {
-
-                disconnectPeers()
-
-                preGameFrame.classList.add('banished')
-                gameFrame.classList.add('banished')
-                disconnectFrame.classList.remove('banished')
-
-                controlBar.classList.remove('opened')
-                interactionPanel.classList.add('banished')
-                playerBar.classList.remove('opened')
-
-              }, 6000)
-
-            }
-
-          }, 0)
-
-        }, 3000 * playerList.length + 6000)
+        }, 3000 * playerList.length)
 
       }, 16000)
 
@@ -1287,57 +1016,39 @@ callButton.onclick = async () => {
 
       gameState.players[playerId] = ({
         id: playerId,
-        name: 'Player ' + singleDigits[playerId + 1],
+        name: 'Player ' + (playerId + 1),
         ready: false,
         responses: [],
         responseString: generateResponseString(),
-        endorsements: {},
-        votingScore: 0,
       })
 
       if (Object.keys(gameState.players).length >= minPlayers && gameState.currentRound.segment == 'lobby') {
         
-        let newPlayerMarker = document.createElement('div')
-        newPlayerMarker.classList.add('playerMarker')
-        let newPlayerIcon = document.createElement('p')
-        newPlayerIcon.innerText = gameState.players[playerId].name[0]
-        newPlayerMarker.appendChild(newPlayerIcon)
+        let newPlayerDiv = document.createElement('div')
         let newPlayerLabel = document.createElement('p')
         newPlayerLabel.innerText = gameState.players[playerId].name
-        newPlayerMarker.appendChild(newPlayerLabel)
+        newPlayerDiv.appendChild(newPlayerLabel)
         let newPlayerIndicator = document.createElement('img')
-        if (!document.documentElement.classList.contains('dev')) {
-          newPlayerIndicator.src = '/icons/ready.png'
-        } else {
-          newPlayerIndicator.src = '/icons/ready2.png'
-        }
+        newPlayerIndicator.src = '/icons/ready.png'
         newPlayerIndicator.classList.add('banished')
         newPlayerIndicator.classList.add('icon')
-        newPlayerMarker.appendChild(newPlayerIndicator)
-        
-        playerBar.appendChild(newPlayerMarker)
+        newPlayerDiv.appendChild(newPlayerIndicator)
+
+        playerBar.appendChild(newPlayerDiv)
         
       } else if (gameState.currentRound.segment == 'lobby') {
 
-        let newPlayerMarker = document.createElement('div')
-        newPlayerMarker.classList.add('playerMarker')
-        let newPlayerIcon = document.createElement('p')
-        newPlayerIcon.innerText = gameState.players[playerId].name[0]
-        newPlayerMarker.appendChild(newPlayerIcon)
+        let newPlayerDiv = document.createElement('div')
         let newPlayerLabel = document.createElement('p')
         newPlayerLabel.innerText = gameState.players[playerId].name
-        newPlayerMarker.appendChild(newPlayerLabel)
+        newPlayerDiv.appendChild(newPlayerLabel)
         let newPlayerIndicator = document.createElement('img')
-        if (!document.documentElement.classList.contains('dev')) {
-          newPlayerIndicator.src = '/icons/ready.png'
-        } else {
-          newPlayerIndicator.src = '/icons/ready2.png'
-        }
+        newPlayerIndicator.src = '/icons/ready.png'
         newPlayerIndicator.classList.add('banished')
         newPlayerIndicator.classList.add('icon')
-        newPlayerMarker.appendChild(newPlayerIndicator)
-        
-        playerBar.appendChild(newPlayerMarker)
+        newPlayerDiv.appendChild(newPlayerIndicator)
+
+        playerBar.appendChild(newPlayerDiv)
         
         newPeer()
 
@@ -1350,31 +1061,11 @@ callButton.onclick = async () => {
       
       const parsedGameState = parseGameState(event.data, gameState, playerId)
       
-      if (gameState.players[playerId]) {
-
-        Object.entries(parsedGameState.players[playerId].endorsements).forEach(([endorsedPlayerId, endorsedPlayerAmount]) => {
-
-          if (endorsedPlayerAmount > gameState.players[playerId].endorsements[endorsedPlayerId] && playerId != myId) {
-
-            let playerResponses = parsedGameState.players[endorsedPlayerId].responses
-
-            if (playerResponses.length == 0 || responseList[playerResponses[0].pack] === undefined || responseList[playerResponses[0].pack].responses[playerResponses[0].card] === undefined) {
-              logReaction(playerId, 0)
-            } else {
-              logReaction(playerId, playerResponses[0].pack + 1)
-            }
-            
-          }
-
-        })
-      
-      }
-
       let allPlayersReadied = true
 
-      Object.values(parsedGameState.players).forEach(player => {
+      Object.keys(parsedGameState.players).forEach(player => {
         
-        if (player.ready == false) {
+        if (parsedGameState.players[player].ready == false) {
           allPlayersReadied = false
         }
 
@@ -1388,7 +1079,7 @@ callButton.onclick = async () => {
 
         runGame()
 
-      } else if (allPlayersReadied == true && parsedGameState.currentRound.segment == 'reveal') {
+      } else if (allPlayersReadied == true && parsedGameState.currentRound.segment == 'reveal' && parsedGameState.currentRound.player == Object.keys(parsedGameState.players).length - 1) {
 
         runRound()
 
@@ -1434,17 +1125,17 @@ callButton.onclick = async () => {
         let answerDescription = new RTCSessionDescription(data.answer);
         newPc.setRemoteDescription(answerDescription);
 
-      } else if (!newPc.currentRemoteDescription && data?.answer) { // Currently defunct, as newer clients quit peer connection upon realising they are joining an invalid room.
-        
+      } else if (!newPc.currentRemoteDescription && data?.answer) {
+
         if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == NaN || sdp.substring(sdp.search('heavy-handed') + 15, sdp.search('heavy-handed') + 16) != '.') {
 
           addNotification('An invalid client tried to join your room.')
   
-        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion.substring(2)) {
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion) {
   
           addNotification('A client on an outdated version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + ') tried to join your room.')
   
-        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion.substring(2)) {
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion) {
   
           addNotification('A client on a newer version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + ') tried to join your room.')
   
@@ -1504,14 +1195,10 @@ joinButton.onclick = async () => {
       if (newPc.connectionState == 'disconnected' || newPc.connectionState == 'failed') {
 
         disconnectPeers()
-
+  
         preGameFrame.classList.add('banished')
         gameFrame.classList.add('banished')
         disconnectFrame.classList.remove('banished')
-
-        controlBar.classList.remove('opened')
-        interactionPanel.classList.add('banished')
-        playerBar.classList.remove('opened')
   
       }
   
@@ -1542,44 +1229,10 @@ joinButton.onclick = async () => {
 
         let prevPlayers = Object.keys(gameState.players)
         let newPlayers = Object.keys(parsedGameState.players)
-
-        newPlayers.forEach(playerId => {
-          
-          if (gameState.players[playerId]) {
-            
-            Object.entries(parsedGameState.players[playerId].endorsements).forEach(([endorsedPlayerId, endorsedPlayerAmount]) => {
-              
-              if (endorsedPlayerAmount > gameState.players[playerId].endorsements[endorsedPlayerId] && playerId != myId) {
-
-                let playerResponses = parsedGameState.players[endorsedPlayerId].responses
-
-                if (playerResponses.length == 0 || responseList[playerResponses[0].pack] === undefined || responseList[playerResponses[0].pack].responses[playerResponses[0].card] === undefined) {
-                  logReaction(playerId, 0)
-                } else {
-                  logReaction(playerId, playerResponses[0].pack + 1)
-                }
-
-              }
-
-            })
-
-          }
-
-        })
         
         if (prevPlayers.length == 0) {
 
-          nameText.innerText = parsedGameState.players[myId].name
-
-          if (parsedGameState.gameRules.votingSystem == 'score') {
-            scoreText.innerText = '0'
-            roundsLeftText.innerText = 'Most endorsements after ' + parsedGameState.gameRules.numRounds + ' rounds wins'
-          } else if (parsedGameState.gameRules.votingSystem == 'quota') {
-            scoreText.innerText = '0'
-            roundsLeftText.innerText = 'First to ' + parsedGameState.gameRules.pointsToWin + 'pts wins'
-          }
-
-          nameInput.placeholder = parsedGameState.players[myId].name
+          nameInput.setAttribute('placeholder', parsedGameState.players[myId].name)
 
           leaveButton.removeAttribute('disabled')
           readyButton.removeAttribute('disabled')
@@ -1589,36 +1242,25 @@ joinButton.onclick = async () => {
             playerBar.children[0].remove()
           })
           
-          newPlayers.forEach((playerId) => {
-            let newPlayerMarker = document.createElement('div')
-            newPlayerMarker.classList.add('playerMarker')
-            let newPlayerIcon = document.createElement('p')
-            newPlayerIcon.innerText = parsedGameState.players[playerId].name[0]
-            newPlayerMarker.appendChild(newPlayerIcon)
+          newPlayers.forEach((player) => {
+            let newPlayerDiv = document.createElement('div')
             let newPlayerLabel = document.createElement('p')
-            newPlayerLabel.innerText = parsedGameState.players[playerId].name
-            newPlayerMarker.appendChild(newPlayerLabel)
+            newPlayerLabel.innerText = parsedGameState.players[player].name
+            newPlayerDiv.appendChild(newPlayerLabel)
             let newPlayerIndicator = document.createElement('img')
-            if (!document.documentElement.classList.contains('dev')) {
-              newPlayerIndicator.src = '/icons/ready.png'
-            } else {
-              newPlayerIndicator.src = '/icons/ready2.png'
-            }
+            newPlayerIndicator.src = '/icons/ready.png'
             newPlayerIndicator.classList.add('banished')
             newPlayerIndicator.classList.add('icon')
-            newPlayerMarker.appendChild(newPlayerIndicator)
-            
-            playerBar.appendChild(newPlayerMarker)
+            newPlayerDiv.appendChild(newPlayerIndicator)
 
-            if (parsedGameState.players[playerId].ready == true) {
+            playerBar.appendChild(newPlayerDiv)
+
+            if (parsedGameState.players[player].ready == true) {
               newPlayerIndicator.classList.remove('banished')
             }
           })
-          
-          controlBar.classList.add('opened')
+        
           playerBar.classList.remove('banished')
-          playerBar.classList.add('opened')
-
           preGameFrame.classList.add('banished')
           gameFrame.classList.remove('banished')
 
@@ -1626,25 +1268,17 @@ joinButton.onclick = async () => {
 
         } else if (newPlayers.length > prevPlayers.length) {
 
-          let newPlayerMarker = document.createElement('div')
-          newPlayerMarker.classList.add('playerMarker')
-          let newPlayerIcon = document.createElement('p')
-          newPlayerIcon.innerText = parsedGameState.players[newPlayers.length - 1].name[0]
-          newPlayerMarker.appendChild(newPlayerIcon)
+          let newPlayerDiv = document.createElement('div')
           let newPlayerLabel = document.createElement('p')
           newPlayerLabel.innerText = parsedGameState.players[newPlayers.length - 1].name
-          newPlayerMarker.appendChild(newPlayerLabel)
+          newPlayerDiv.appendChild(newPlayerLabel)
           let newPlayerIndicator = document.createElement('img')
-          if (!document.documentElement.classList.contains('dev')) {
-            newPlayerIndicator.src = '/icons/ready.png'
-          } else {
-            newPlayerIndicator.src = '/icons/ready2.png'
-          }
+          newPlayerIndicator.src = '/icons/ready.png'
           newPlayerIndicator.classList.add('banished')
           newPlayerIndicator.classList.add('icon')
-          newPlayerMarker.appendChild(newPlayerIndicator)
-          
-          playerBar.appendChild(newPlayerMarker)
+          newPlayerDiv.appendChild(newPlayerIndicator)
+
+          playerBar.appendChild(newPlayerDiv)
 
         } else if (newPlayers.length < prevPlayers.length) {
 
@@ -1663,17 +1297,12 @@ joinButton.onclick = async () => {
 
             let peerIndex = newPlayers.indexOf(playerId)
 
-            if (playerId == myId) {
-              nameText.innerText = parsedGameState.players[playerId].name
-            }
-
-            playerBar.children[peerIndex].children[0].innerText = parsedGameState.players[playerId].name[0]
-            playerBar.children[peerIndex].children[1].innerText = parsedGameState.players[playerId].name
+            playerBar.children[peerIndex].children[0].innerText = parsedGameState.players[playerId].name
 
             if (parsedGameState.players[playerId].ready == true) {
-              playerBar.children[peerIndex].children[2].classList.remove('banished')
+              playerBar.children[peerIndex].children[1].classList.remove('banished')
             } else {
-              playerBar.children[peerIndex].children[2].classList.add('banished')
+              playerBar.children[peerIndex].children[1].classList.add('banished')
             }
 
           })
@@ -1683,27 +1312,14 @@ joinButton.onclick = async () => {
         if (parsedGameState.currentRound.segment != gameState.currentRound.segment) {
 
           if (parsedGameState.currentRound.segment == 'lobby' || parsedGameState.currentRound.segment == 'podium') {
-
-            controlBar.classList.add('opened')
-            playerBar.classList.add('opened')
-
             readyButton.removeAttribute('disabled')
 
             setDynamicFrame(parsedGameState.currentRound)
-
           } else {
-
-            controlBar.classList.remove('opened')
-            playerBar.classList.remove('opened')
             readyButton.setAttribute('disabled', true)
-
           }
           
           if (parsedGameState.currentRound.segment == 'prompt') {
-
-            Object.keys(spotlightFrame.children).forEach(function(child) {
-              spotlightFrame.children[0].remove()
-            })
 
             if (parsedGameState.currentRound.promptType == 0) {
               setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId])
@@ -1717,293 +1333,21 @@ joinButton.onclick = async () => {
               setDynamicFrame(parsedGameState.currentRound, promptList[parsedGameState.currentRound.promptType].prompts[parsedGameState.currentRound.promptId])
             }
 
-          }
-
-          if (parsedGameState.currentRound.segment == 'response') {
-
-            if (parsedGameState.currentRound.promptType == 0) {
-              musicAudio.src = '/sounds/music/upbeat.mp3'            
-            } else if (parsedGameState.currentRound.promptType == 1) {
-              musicAudio.src = '/sounds/music/heavenly.mp3'
-            } else if (parsedGameState.currentRound.promptType == 2) {
-              musicAudio.src = '/sounds/music/gritty.mp3'
-            } else if (parsedGameState.currentRound.promptType == 3) {
-              musicAudio.src = '/sounds/music/lowkey.mp3'
-            } else {
-              musicAudio.src = '/sounds/music/upbeat.mp3'
-            }
-            
-            musicAudio.load()
-            musicAudio.play()
-  
-            Object.keys(cardFrame.children).forEach((child) => {
-              cardFrame.children[0].remove()
-            })
-  
-            let i = 1
-            let responsePackChosen = parseInt((parsedGameState.players[myId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7), Object.keys(responseList).length)
-            let responsesChosen = []
-  
-            let messagePayload = {
-              responses: []
-            }
-  
-            cardFrame.style.setProperty('--numCards', 0)
-  
-            while (i <= 6) {
-  
-              let responseId = parseInt((parsedGameState.players[myId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7 + i), 25)
-    
-              responsesChosen.push(responseId)
-              
-              let newCard = cardFrame.appendChild(document.createElement('div'))
-              newCard.classList.add('card')
-              newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].responses[responseId]
-              newCard.children[0].classList.add('cardText')
-              newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].emoji
-              newCard.children[1].classList.add('cardEmoji')
-              newCard.appendChild(document.createElement('p')).innerText = ''
-              newCard.children[2].classList.add('cardContext')
-  
-              twemoji.parse(newCard)
-    
-              newCard.onclick = async () => {
-  
-                neutralAudio.load()
-                neutralAudio.play()
-  
-                Object.values(newCard.parentElement.children).forEach((card) => {
-  
-                  card.classList.remove('selected')
-                  card.children[2].innerText = ''
-    
-                })
-    
-                newCard.classList.add('selected')
-                newCard.children[2].innerText = 'selected'
-                
-                messagePayload.responses[0] = {
-                  card: responseId,
-                  pack: responsePackChosen
-                }
-  
-                sendToPeers(messagePayload)
-    
-              }
-  
-              cardFrame.style.setProperty('--numCards', Number(cardFrame.style.getPropertyValue('--numCards')) + 1)
-    
-              i++
-    
-            }
-  
-            setTimeout(function() {
-              cardFrame.classList.remove('banished')
-            }, 0)
-            
-          }
-
-          if (parsedGameState.currentRound.segment == 'voting') {
+          } else if (parsedGameState.currentRound.segment != 'reveal') {
 
             spotlightFrame.style.setProperty('--numCards', 0)
-
-            Object.keys(interactionPanel.children).forEach((child) => {
-              interactionPanel.children[0].remove()
-            })
-            
-            setTimeout(function() {
-              interactionPanel.classList.remove('banished')
-            }, 0)
-  
-            reactionsLogged = {}
-
-            let playerCount = Object.keys(parsedGameState.players).length
-
-            Object.keys(parsedGameState.players).forEach(function(playerId) {
-              
-              parsedGameState.players[playerId].endorsements = {}
-  
-              let playerResponses = parsedGameState.players[playerId].responses
-  
-              if (playerResponses.length == 0 || responseList[playerResponses[0].pack] === undefined || responseList[playerResponses[0].pack].responses[playerResponses[0].card] === undefined) {
-  
-                let newInteraction = interactionPanel.appendChild(document.createElement('button'))
-                newInteraction.classList.add('interaction')
-                newInteraction.classList.add('important')
-                newInteraction.innerText = (parseInt(playerId) + 1) + '📄'
-  
-                twemoji.parse(newInteraction)
-  
-                newInteraction.onclick = async () => {
-  
-                  if (!newInteraction.classList.contains('simulatedActive')) {
-                
-                    successAudio.load()
-                    successAudio.play()
-    
-                    newInteraction.classList.add('simulatedActive')
-
-                    if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.add('selected')
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = 'endorsed'
-            
-                    }
-                    
-                    logReaction(myId, 0)
-
-                    reactionsLogged[playerId] = 5
-    
-                  } else {
-    
-                    alertAudio.load()
-                    alertAudio.play()
-    
-                    newInteraction.classList.remove('simulatedActive')
-
-                    if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.remove('selected')
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = parsedGameState.players[playerId].name
-            
-                    }
-
-                    reactionsLogged[playerId] = 0
-    
-                  }
-
-                  sendToPeers({
-                    endorsements: reactionsLogged
-                  })
-  
-                }
-  
-              } else {
-  
-                let newInteraction = interactionPanel.appendChild(document.createElement('button'))
-                newInteraction.classList.add('interaction')
-                newInteraction.classList.add('important')
-                newInteraction.innerText = (parseInt(playerId) + 1) + responseList[playerResponses[0].pack].emoji
-  
-                twemoji.parse(newInteraction)
-  
-                newInteraction.onclick = async () => {
-                  
-                  if (!newInteraction.classList.contains('simulatedActive')) {
-                
-                    successAudio.load()
-                    successAudio.play()
-    
-                    newInteraction.classList.add('simulatedActive')
-
-                    if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.add('selected')
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = 'endorsed'
-            
-                    }
-                    
-                    logReaction(myId, playerResponses[0].pack + 1)
-
-                    reactionsLogged[playerId] = 5
-    
-                  } else {
-    
-                    alertAudio.load()
-                    alertAudio.play()
-    
-                    newInteraction.classList.remove('simulatedActive')
-
-                    if (spotlightFrame.children.length >= (playerCount - parseInt(playerId))) {
-
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].classList.remove('selected')
-                      spotlightFrame.children[spotlightFrame.children.length - (playerCount - parseInt(playerId))].children[2].innerText = parsedGameState.players[playerId].name
-            
-                    }
-
-                    reactionsLogged[playerId] = 0
-    
-                  }
-
-                  sendToPeers({
-                    endorsements: reactionsLogged
-                  })
-  
-                }
-  
-              }
-  
-            })
-
-          }
-
-          if (parsedGameState.currentRound.segment == 'reveal' || parsedGameState.currentRound.segment == 'podium') {
-
-            segmentText.innerText = parsedGameState.currentRound.segmentTitle
-
-            if (parsedGameState.gameRules.votingSystem == 'score') {
-
-              let currentLeader = 0
-
-              Object.values(parsedGameState.players).forEach(player => {
-
-                if (player.votingScore > parsedGameState.players[currentLeader].votingScore) {
-                  currentLeader = player.id
-                }
-
-              })
-
-              Object.keys(parsedGameState.players).forEach(playerId => {
-
-                let peerIndex = Object.keys(parsedGameState.players).indexOf(playerId)
-    
-                if (parsedGameState.players[currentLeader].votingScore == 0) {
-
-                  playerBar.children[peerIndex].style.setProperty('--percentageOfLeadersPoints', '100%')
-
-                } else {
-
-                  playerBar.children[peerIndex].style.setProperty('--percentageOfLeadersPoints', (Math.round(parsedGameState.players[playerId].votingScore / parsedGameState.players[currentLeader].votingScore * 100)).toString() + '%')
-                
-                }
-
-                if (playerId == myId) {
-                  scoreText.innerText = parsedGameState.players[playerId].votingScore
-                }
-
-              })
-
-              roundsLeftText.innerText = (parsedGameState.gameRules.numRounds - parsedGameState.currentRound.roundNum + 1) + ' rounds to go'
-
-            } else if (parsedGameState.gameRules.votingSystem == 'quota') {
-
-              Object.keys(parsedGameState.players).forEach(playerId => {
-  
-                let peerIndex = Object.keys(parsedGameState.players).indexOf(playerId)
-                
-                playerBar.children[peerIndex].style.setProperty('--percentageOfLeadersPoints', (parsedGameState.players[playerId].votingScore / parsedGameState.gameRules.pointsToWin * 100).toString() + '%')
-
-                if (playerId == myId) {
-                  scoreText.innerText = parsedGameState.players[playerId].votingScore
-                }
-
-              })
-
-              roundsLeftText.innerText = 'out of ' + parsedGameState.gameRules.pointsToWin + 'pts to win'
-  
-            }
-
-            controlBar.classList.add('opened')
-            interactionPanel.classList.add('banished')
-            playerBar.classList.add('opened')
-
-            readyButton.removeAttribute('disabled')
 
           }
 
         }
 
-        if (parsedGameState.currentRound.timeLeft > 0 && (gameState.currentRound.timeLeft != parsedGameState.currentRound.timeLeft)) {
+        if (parsedGameState.currentRound.segment == 'reveal' && parsedGameState.currentRound.player == Object.keys(parsedGameState.players).length - 1 && !parsedGameState.players[myId].ready) {
+
+          readyButton.removeAttribute('disabled')
+
+        }
+
+        if (parsedGameState.currentRound.timeLeft > 0 && gameState.currentRound.timeLeft != parsedGameState.currentRound.timeLeft) {
 
           let timeLeft = parsedGameState.currentRound.timeLeft
 
@@ -2023,18 +1367,17 @@ joinButton.onclick = async () => {
                 
                 segmentText.classList.remove('i')
                 segmentText.innerText = parsedGameState.currentRound.segmentTitle
-
               } else {
                 segmentText.innerText = parsedGameState.currentRound.segmentTitle + ' • ' + timeLeft + 's'
               }
 
             }, 1000)
 
-          }, 800)
+          }, 1000)
 
         }
         
-        if (parsedGameState.currentRound.segment == 'voting' && (gameState.currentRound.segment != 'voting' || parsedGameState.currentRound.player != gameState.currentRound.player)) {
+        if (parsedGameState.currentRound.segment == 'reveal' && (gameState.currentRound.segment != 'reveal' || parsedGameState.currentRound.player != gameState.currentRound.player)) {
 
           cardFrame.classList.add('banished')
 
@@ -2069,11 +1412,6 @@ joinButton.onclick = async () => {
 
           }
 
-          if (interactionPanel.children[player.id].classList.contains('simulatedActive')) {
-            newCard.classList.add('selected')
-            newCard.children[2].innerText = 'endorsed'
-          }
-
           spotlightFrame.style.setProperty('--numCards', Number(spotlightFrame.style.getPropertyValue('--numCards')) + 1)
           spotlightFrame.insertBefore(newCard, spotlightFrame.children[0])
           
@@ -2085,14 +1423,9 @@ joinButton.onclick = async () => {
 
         } else if (parsedGameState.currentRound.segment == 'podium') {
 
-          segmentText.innerText = parsedGameState.currentRound.segmentTitle
-          setDynamicFrame(parsedGameState.currentRound)
-
           Object.keys(spotlightFrame.children).forEach(function(child) {
             spotlightFrame.children[0].remove()
           })
-
-          interactionPanel.classList.add('banished')
 
         } else if (parsedGameState.currentRound.segment == 'lobby') {
 
@@ -2102,16 +1435,95 @@ joinButton.onclick = async () => {
             spotlightFrame.children[0].remove()
           })
 
-          interactionPanel.classList.add('banished')
-
         } else if (parsedGameState.currentRound.segment == 'prompt') {
 
+          Object.keys(spotlightFrame.children).forEach(function(child) {
+            spotlightFrame.children[0].remove()
+          })
 
         }
 
         if (parsedGameState.currentRound.segment == 'response' && gameState.currentRound.segment != 'response') {
 
+          if (parsedGameState.currentRound.promptType == 0) {
+            musicAudio.src = '/sounds/music/upbeat.mp3'            
+          } else if (parsedGameState.currentRound.promptType == 1) {
+            musicAudio.src = '/sounds/music/heavenly.mp3'
+          } else if (parsedGameState.currentRound.promptType == 2) {
+            musicAudio.src = '/sounds/music/gritty.mp3'
+          } else if (parsedGameState.currentRound.promptType == 3) {
+            musicAudio.src = '/sounds/music/lowkey.mp3'
+          } else {
+            musicAudio.src = '/sounds/music/upbeat.mp3'
+          }
           
+          musicAudio.load()
+          musicAudio.play()
+
+          Object.keys(cardFrame.children).forEach((child) => {
+            cardFrame.children[0].remove()
+          })
+
+          let i = 1
+          let responsePackChosen = parseInt((parsedGameState.players[myId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7), Object.keys(responseList).length)
+          let responsesChosen = []
+
+          let messagePayload = {
+            responses: []
+          }
+
+          cardFrame.style.setProperty('--numCards', 0)
+
+          while (i <= 6) {
+
+            let responseId = parseInt((parsedGameState.players[myId].responseString).charAt(7 * parsedGameState.currentRound.roundNum - 7 + i), 25)
+  
+            responsesChosen.push(responseId)
+            
+            let newCard = cardFrame.appendChild(document.createElement('div'))
+            newCard.classList.add('card')
+            newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].responses[responseId]
+            newCard.children[0].classList.add('cardText')
+            newCard.appendChild(document.createElement('p')).innerText = responseList[responsePackChosen].emoji
+            newCard.children[1].classList.add('cardEmoji')
+            newCard.appendChild(document.createElement('p')).innerText = ''
+            newCard.children[2].classList.add('cardContext')
+
+            twemoji.parse(newCard)
+  
+            newCard.onclick = async () => {
+
+              neutralAudio.load()
+              neutralAudio.play()
+
+              Object.keys(newCard.parentElement.children).forEach((child) => {
+
+                newCard.parentElement.children[child].classList.remove('selected')
+                newCard.parentElement.children[child].children[2].innerText = ''
+  
+              })
+  
+              newCard.classList.add('selected')
+              newCard.children[2].innerText = 'selected'
+              
+              messagePayload.responses[0] = {
+                card: responseId,
+                pack: responsePackChosen
+              }
+
+              sendToPeers(messagePayload)
+  
+            }
+
+            cardFrame.style.setProperty('--numCards', Number(cardFrame.style.getPropertyValue('--numCards')) + 1)
+  
+            i++
+  
+          }
+
+          setTimeout(function() {
+            cardFrame.classList.remove('banished')
+          }, 0)
 
         }
 
@@ -2142,10 +1554,6 @@ joinButton.onclick = async () => {
       gameFrame.classList.add('banished')
       disconnectFrame.classList.remove('banished')
 
-      controlBar.classList.remove('opened')
-      interactionPanel.classList.add('banished')
-      playerBar.classList.remove('opened')
-
     } else if (callData) {
           
       const offerDescription = callData.offer;
@@ -2153,20 +1561,20 @@ joinButton.onclick = async () => {
       let sdp = offerDescription.sdp
       
       if (sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) == majorVersion) {
-
-        await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
         
+        await newPc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+            
         const answerDescription = await newPc.createAnswer();
         answerDescription.sdp = answerDescription.sdp.replace('s=-', 's=heavy-handed v' + majorVersion)
         await newPc.setLocalDescription(answerDescription);
-        
+
         const answer = {
           sdp: answerDescription.sdp,
           type: answerDescription.type,
         };
 
         await firestore.updateDoc(callDoc, { answer });
-        
+
         firestore.onSnapshot(offerCandidates, (snapshot) => {
           snapshot.docChanges().forEach((change) => {
             if (change.type === 'added') {
@@ -2188,11 +1596,11 @@ joinButton.onclick = async () => {
 
           addNotification('This room is running an invalid version.')
 
-        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion.substring(2)) {
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) < majorVersion) {
 
           addNotification('This room is running an older version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Ask the host to update.')
 
-        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion.substring(2)) {
+        } else if (+sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) > majorVersion) {
 
           addNotification('This room is running a newer version (' + sdp.substring(sdp.search('heavy-handed') + 14, sdp.search('heavy-handed') + 17) + '). Please update in order to join.')
 
@@ -2208,10 +1616,109 @@ joinButton.onclick = async () => {
 
 
 
+readyButton.onclick = async () => {
+
+  neutralAudio.load()
+  neutralAudio.play()
+
+  readyButton.setAttribute('disabled', true)
+
+  if (myId == 0) {
+
+    gameState.players[myId].ready = true
+    playerBar.children[myId].children[1].classList.remove('banished')
+
+    sendToPeers(gameState);
+
+    let allPlayersReadied = true
+
+    Object.keys(gameState.players).forEach(player => {
+      
+      if (gameState.players[player].ready == false) {
+        allPlayersReadied = false
+      }
+
+    })
+
+    if (allPlayersReadied == true && gameState.currentRound.segment == 'reveal' && gameState.currentRound.player == Object.keys(gameState.players).length - 1) {
+
+      runRound()
+
+    }
+
+  } else {
+
+    sendToPeers({
+      ready: true
+    })
+
+  }
+
+}
+
+
+nameInput.onkeyup = async (event) => {
+
+  if (event.key == 'Enter' && nameInput.value.length <= 15 && (nameInput.value).trim() != '') {
+
+    if (myId == 0) {
+
+      gameState.players[myId].name = (nameInput.value).trim()
+      playerBar.children[myId].children[0].innerText = (nameInput.value).trim()
+
+      sendToPeers(gameState);
+
+    } else {
+
+      sendToPeers({
+        name: (nameInput.value).trim()
+      })
+
+    }
+
+  } else if (event.key == 'Enter') {
+
+    nameInput.value = gameState.players[myId].name
+
+  }
+  
+}
+
+
+dismissButton.onclick = async () => {
+
+  neutralAudio.load()
+  neutralAudio.play()
+
+  gameState = initialGameState
+
+  preGameFrame.classList.remove('banished')
+  disconnectFrame.classList.add('banished')
+  
+  joinInput.value = ''
+  joinInput.removeAttribute('disabled')
+  joinButton.removeAttribute('disabled')
+  callButton.removeAttribute('disabled')
+
+  playerBar.classList.add('banished')
+
+  nameInput.setAttribute('placeholder', '')
+
+  leaveButton.setAttribute('disabled', true)
+  readyButton.setAttribute('disabled', true)
+  nameInput.setAttribute('disabled', true)
+
+  Object.keys(spotlightFrame.children).forEach(function(child) {
+    spotlightFrame.children[0].remove()
+  })
+
+}
+
+
 leaveButton.onclick = async () => {
 
-  successAudio.load()
-  successAudio.play()
+  neutralAudio.load()
+  neutralAudio.play()
 
   if (myId == 0) {
 
@@ -2235,9 +1742,8 @@ leaveButton.onclick = async () => {
   callButton.removeAttribute('disabled')
 
   playerBar.classList.add('banished')
-  interactionPanel.classList.add('banished')
 
-  nameInput.placeholder = ''
+  nameInput.setAttribute('placeholder', '')
 
   leaveButton.setAttribute('disabled', true)
   readyButton.setAttribute('disabled', true)
@@ -2249,341 +1755,29 @@ leaveButton.onclick = async () => {
 
 }
 
-readyButton.onclick = async () => {
-
-  successAudio.load()
-  successAudio.play()
-
-  readyButton.setAttribute('disabled', true)
-
-  if (myId == 0) {
-
-    gameState.players[myId].ready = true
-    playerBar.children[myId].children[2].classList.remove('banished')
-
-    sendToPeers(gameState);
-
-    let allPlayersReadied = true
-
-    Object.values(gameState.players).forEach(player => {
-      
-      if (player.ready == false) {
-        allPlayersReadied = false
-      }
-
-    })
-
-    if (allPlayersReadied == true && gameState.currentRound.segment == 'reveal') {
-
-      runRound()
-
-    }
-
-  } else {
-
-    sendToPeers({
-      ready: true
-    })
-
-  }
-
-}
-
-nameInput.onchange = async (event) => {
-
-  if (nameInput.value.length <= 14 && (nameInput.value).trim() != '') {
-
-    if (myId == 0) {
-
-      gameState.players[myId].name = (nameInput.value).trim()
-      nameText.innerText = (nameInput.value).trim()
-      playerBar.children[myId].children[0].innerText = (nameInput.value).trim()[0]
-      playerBar.children[myId].children[1].innerText = (nameInput.value).trim()
-
-      sendToPeers(gameState);
-
-    } else {
-
-      sendToPeers({
-        name: (nameInput.value).trim()
-      })
-
-    }
-
-  } else if ((nameInput.value).trim() == '') {
-
-    if (myId == 0) {
-
-      gameState.players[myId].name = nameInput.placeholder
-      nameText.innerText = nameInput.placeholder
-      playerBar.children[myId].children[0].innerText = nameInput.placeholder[0]
-      playerBar.children[myId].children[1].innerText = nameInput.placeholder
-
-      sendToPeers(gameState);
-
-    } else {
-
-      sendToPeers({
-        name: nameInput.placeholder
-      })
-
-    }
-
-  } else {
-
-    nameInput.value = gameState.players[myId].name
- 
-  }
-  
-}
 
 muteButton.onclick = async () => {
 
   if (globalVolume == 0) {
     
-    successAudio.load()
-    successAudio.play()
+    neutralAudio.load()
+    neutralAudio.play()
 
     globalVolume = 1
 
-    muteButton.innerText = 'mute'
+    muteButton.children[0].setAttribute('src', '/icons/unmuted.png')
 
   } else {
 
     globalVolume = 0
 
-    window.speechSynthesis.cancel()
-
-    muteButton.innerText = 'unmute'
+    muteButton.children[0].setAttribute('src', '/icons/muted.png')
 
   }
 
-  successAudio.volume = globalVolume / 12
-  alertAudio.volume = globalVolume / 12
-  neutralAudio.volume = globalVolume / 12
+  successAudio.volume = globalVolume / 20
+  neutralAudio.volume = globalVolume / 20
   musicAudio.volume = globalVolume / 10
-
-}
-
-
-
-dismissButton.onclick = async () => {
-
-  neutralAudio.load()
-  neutralAudio.play()
-
-  gameState = initialGameState
-
-  preGameFrame.classList.remove('banished')
-  disconnectFrame.classList.add('banished')
-  
-  joinInput.value = ''
-  joinInput.removeAttribute('disabled')
-  joinButton.removeAttribute('disabled')
-  callButton.removeAttribute('disabled')
-
-  playerBar.classList.add('banished')
-  interactionPanel.classList.add('banished')
-
-  nameInput.placeholder = ''
-
-  leaveButton.setAttribute('disabled', true)
-  readyButton.setAttribute('disabled', true)
-  nameInput.setAttribute('disabled', true)
-
-  Object.keys(spotlightFrame.children).forEach(function(child) {
-    spotlightFrame.children[0].remove()
-  })
-
-}
-
-
-
-var keysDown = []
-
-onkeydown = async (event) => {
-
-  if (!keysDown.find(value => { return value == event.key })) {
-
-    keysDown.push(event.key)
-    
-    if (!preGameFrame.classList.contains('banished') && event.key == 'v' && keysDown.find(value => { return value == 'd' }) && keysDown.find(value => { return value == 'e' }) && keysDown.findIndex(value => { return value == 'd' }) < keysDown.findIndex(value => { return value == 'e' })) {
-
-      document.documentElement.classList.add('dev')
-
-      gameTitle.innerText = '¶ dev'
-      gameContext.innerText = '[ dee-ee-vee ] • developer edition'
-      gameDescription.innerText = 'running version ' + majorVersion + '.' + minorVersion
-
-      readyButton.children[0].src = '/icons/ready2.png'
-
-      gameState.gameRules.votingSystem = 'quota'
-
-    }
-
-    if (gameState.currentRound.segment == 'voting' && Object.keys(gameState.players).includes((parseInt(event.key) - 1).toString())) {
-
-      let player = gameState.players[parseInt(event.key) - 1]
-
-      if (!reactionsLogged[parseInt(event.key) - 1]) {
-        reactionsLogged[parseInt(event.key) - 1] = 1
-      } else {
-        reactionsLogged[parseInt(event.key) - 1] += 1
-      }
-
-      if (reactionsLogged[parseInt(event.key) - 1] == 5) {
-
-        let playerCount = Object.keys(gameState.players).length
-
-        successAudio.load()
-        successAudio.play()
-
-        interactionPanel.children[parseInt(event.key) - 1].classList.add('simulatedActive')
-
-        if (spotlightFrame.children.length >= (playerCount - (parseInt(event.key) - 1))) {
-
-          spotlightFrame.children[spotlightFrame.children.length - (playerCount - (parseInt(event.key) - 1))].classList.add('selected')
-          spotlightFrame.children[spotlightFrame.children.length - (playerCount - (parseInt(event.key) - 1))].children[2].innerText = 'endorsed'
-
-        }
-        
-        if (player.responses.length == 0 || responseList[player.responses[0].pack] === undefined || responseList[player.responses[0].pack].responses[player.responses[0].card] === undefined) {
-          logReaction(myId, 0)
-        } else {
-          logReaction(myId, player.responses[0].pack + 1)
-        }
-
-      } else {
-
-        neutralAudio.load()
-        neutralAudio.play()
-
-        if (player.responses.length == 0 || responseList[player.responses[0].pack] === undefined || responseList[player.responses[0].pack].responses[player.responses[0].card] === undefined) {
-          logReaction(myId, 0)
-        } else {
-          logReaction(myId, player.responses[0].pack + 1)
-        }
-
-      }
-
-      if (myId == 0) {
-
-        gameState.players[myId].endorsements = reactionsLogged
-        sendToPeers(gameState)
-
-      } else {
-
-        sendToPeers({
-          endorsements: reactionsLogged
-        })
-
-      }
-
-    }
-
-  }
-
-}
-
-onkeyup = async (event) => {
-
-  if (keysDown.find(value => { return value == event.key })) {
-    keysDown.splice(keysDown.findIndex(value => { return value == event.key }), 1)
-  }
-
-}
-
-function logReaction(playerId, cardPack) { // could rework this into a general 'submit interaction' function
-
-  let emoji = '📄'
-
-  if (cardPack != 0) {
-    emoji = responseList[cardPack - 1].emoji
-  }
-
-  let indicatorReactionEffect = document.createElement('p')
-  indicatorReactionEffect.classList.add('reactionEffect')
-  indicatorReactionEffect.innerText = emoji
-
-  twemoji.parse(indicatorReactionEffect)
-
-  let indicatorSize = Math.floor(Math.random() * 10 + 20)
-  let indicatorRotation = Math.floor(Math.random() * 20 - 10)
-  indicatorReactionEffect.style.fontSize = indicatorSize + 'px'
-  indicatorReactionEffect.style.height = indicatorSize + 'px'
-  indicatorReactionEffect.style.width = indicatorSize + 'px'
-  indicatorReactionEffect.children[0].style.transform = 'rotate(' + indicatorRotation + 'deg)'
-  indicatorReactionEffect.style.right = 'calc(3% + 416.25px - 52.5px * ' + (parseInt(playerId) + 1) + ' - ' + indicatorSize / 2 + 'px + 26.25px)'
-  
-  document.body.appendChild(indicatorReactionEffect)
-
-  indicatorReactionEffect.getAnimations()[0].onfinish = () => {
-    indicatorReactionEffect.remove()
-  }
-
-  let popupReactionEffect = document.createElement('p')
-  popupReactionEffect.classList.add('reactionEffect')
-  popupReactionEffect.innerText = emoji
-
-  twemoji.parse(popupReactionEffect)
-
-  let popupSize = Math.floor(Math.random() * 20 + 52)
-  let popupRotation = Math.floor(Math.random() * 30 - 15)
-  let popupXOffset = Math.floor(Math.random() * 400)
-  let popupYOffset = Math.floor(Math.random() * 300)
-  let popupDir = Math.floor(Math.random() * 2)
-  popupReactionEffect.style.fontSize = popupSize + 'px'
-  popupReactionEffect.style.height = popupSize + 'px'
-  popupReactionEffect.style.width = popupSize + 'px'
-  popupReactionEffect.children[0].style.transform = 'rotate(' + popupRotation + 'deg)'
-
-  popupReactionEffect.style.animationDelay = (Math.random() / 2 + 0.25) + 's'
-
-  if (popupDir == 0) {
-    popupReactionEffect.style.left = 'calc(3% + ' + popupXOffset + 'px)'
-  } else {
-    popupReactionEffect.style.right = 'calc(3% + ' + popupXOffset + 'px)'
-  }
-
-  popupReactionEffect.style.bottom = 'calc(80px + 200px + ' + popupYOffset + 'px)'
-
-  document.body.appendChild(popupReactionEffect)
-
-  popupReactionEffect.getAnimations()[0].onfinish = () => {
-    popupReactionEffect.remove()
-  }
-
-  let popupReactionEffect2 = document.createElement('p')
-  popupReactionEffect2.classList.add('reactionEffect')
-  popupReactionEffect2.innerText = emoji
-
-  twemoji.parse(popupReactionEffect2)
-
-  let popup2Size = Math.floor(Math.random() * 20 + 52)
-  let popup2Rotation = Math.floor(Math.random() * 30 - 15)
-  let popup2XOffset = Math.floor(Math.random() * 400)
-  let popup2YOffset = Math.floor(Math.random() * 300)
-  let popup2Dir = Math.floor(Math.random() * 2)
-  popupReactionEffect2.style.fontSize = popup2Size + 'px'
-  popupReactionEffect2.style.height = popup2Size + 'px'
-  popupReactionEffect2.style.width = popup2Size + 'px'
-  popupReactionEffect2.children[0].style.transform = 'rotate(' + popup2Rotation + 'deg)'
-
-  popupReactionEffect2.style.animationDelay = (Math.random() / 2 + 0.25) + 's'
-
-  if (popup2Dir == 0) {
-    popupReactionEffect2.style.left = 'calc(3% + ' + popup2XOffset + 'px)'
-  } else {
-    popupReactionEffect2.style.right = 'calc(3% + ' + popup2XOffset + 'px)'
-  }
-
-  popupReactionEffect2.style.bottom = 'calc(80px + 200px + ' + popup2YOffset + 'px)'
-
-  document.body.appendChild(popupReactionEffect2)
-
-  popupReactionEffect2.getAnimations()[0].onfinish = () => {
-    popupReactionEffect2.remove()
-  }
 
 }
 
@@ -2602,25 +1796,19 @@ function parseGameState(data, gameState, playerId) {
     parsedGameState.players[playerId].ready = message.ready
 
     if (message.ready == true) {
-      playerBar.children[peerIndex].children[2].classList.remove('banished')
+      playerBar.children[peerIndex].children[1].classList.remove('banished')
     } else {
-      playerBar.children[peerIndex].children[2].classList.add('banished')
+      playerBar.children[peerIndex].children[1].classList.add('banished')
     }
     
   }
 
-  if (typeof(message.name) == 'string' && message.name.length <= 14 && message.name.trim() != '') {
+  if (typeof(message.name) == 'string' && message.name.length <= 15 && message.name.trim() != '') {
 
     let peerIndex = Object.keys(parsedGameState.players).indexOf('' + playerId + '')
     
     parsedGameState.players[playerId].name = (message.name).trim()
-    
-    if (playerId == myId) {
-      nameText.innerText = (message.name).trim()
-    }
-
-    playerBar.children[peerIndex].children[0].innerText = (message.name).trim()[0]
-    playerBar.children[peerIndex].children[1].innerText = (message.name).trim()
+    playerBar.children[peerIndex].children[0].innerText = (message.name).trim()
     
   }
 
@@ -2642,18 +1830,6 @@ function parseGameState(data, gameState, playerId) {
     if (responseIsValid) {
       parsedGameState.players[playerId].responses = message.responses
     }
-
-  }
-
-  if (typeof(message.endorsements) == 'object' && gameState.currentRound.segment == 'voting') {
-
-    Object.entries(message.endorsements).forEach(([endorsedPlayerId, endorsedPlayerAmount]) => {
-
-      if (gameState.players[endorsedPlayerId]) {
-        parsedGameState.players[playerId].endorsements[endorsedPlayerId] = endorsedPlayerAmount
-      }
-
-    })
 
   }
 
@@ -2684,52 +1860,6 @@ function addNotification(message) {
     }, 1000)
 
   }, 5000)
-
-}
-
-
-
-function weightVotes(gameState) {
-
-  let numPlayerEndorsements = {}
-  
-  let quotaPoints = {}
-
-  Object.keys(gameState.players).forEach(function(playerId) {
-
-    Object.entries(gameState.players[playerId].endorsements).forEach(([endorsedPlayerId, endorsedPlayerAmount]) => {
-
-      if (!numPlayerEndorsements[endorsedPlayerId]) {
-        numPlayerEndorsements[endorsedPlayerId] = 0
-      }
-
-      if (endorsedPlayerAmount >= 5) {
-        numPlayerEndorsements[endorsedPlayerId] += 1
-      }
-
-    })
-
-  })
-
-  Object.keys(numPlayerEndorsements).forEach(function(playerId) {
-
-    if (numPlayerEndorsements[playerId] >= 2) {
-      quotaPoints[playerId] = 1
-    } else {
-      quotaPoints[playerId] = 0
-    }
-
-  })
-  
-  if (gameState.gameRules.votingSystem == 'score') {
-
-    return numPlayerEndorsements
-
-  } else if (gameState.gameRules.votingSystem == 'quota') {
-
-    return quotaPoints
-
-  }
 
 }
 
@@ -2791,8 +1921,8 @@ function setDynamicFrame(currentRound, announcerText) {
 
   let spotlightTextElements = document.getElementsByClassName('spotlightTextElement')
   
-  Object.values(spotlightTextElements).forEach(element => {
-    element.classList.add('banished')
+  Object.keys(spotlightTextElements).forEach(index => {
+    spotlightTextElements[index].classList.add('banished')
   })
   
   dynamicFrameBackground.style.backgroundColor = getComputedStyle(dynamicFrameBackground).getPropertyValue('--black')
@@ -2802,7 +1932,7 @@ function setDynamicFrame(currentRound, announcerText) {
     
     setTimeout(() => {
       let utterance = new SpeechSynthesisUtterance(announcerText)
-      utterance.rate = 1.2
+      utterance.rate = 1.5
       utterance.volume = globalVolume * 0.7
 
       window.speechSynthesis.speak(utterance)
@@ -2810,10 +1940,10 @@ function setDynamicFrame(currentRound, announcerText) {
 
     dynamicFrame.setAttribute('promptType', promptList[currentRound.promptType].name)
 
-    if (currentRound.promptType != 2 || currentRound.segment == 'lobby' || currentRound.segment == 'podium') {
+    if (currentRound.promptType != 2) {
 
-      Object.values(spotlightTextElements ).forEach(element => {
-        element.remove()
+      Object.keys(spotlightTextElements).forEach(index => {
+        spotlightTextElements[index].remove()
       })
 
     }
@@ -2825,7 +1955,7 @@ function setDynamicFrame(currentRound, announcerText) {
 
     if (currentRound.segment == 'prompt') {
     
-      dynamicFrameBackground.style.backgroundImage = new URL('/banners/1.png', 'https://localhost:3000')
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/0.png', 'https://localhost:3000')
 
       if (currentRound.promptType == 0 || currentRound.promptType == 500) { // Standard or Dual
 
@@ -2834,11 +1964,7 @@ function setDynamicFrame(currentRound, announcerText) {
       } else if (currentRound.promptType == 1) { // Review
 
         spotlightText.innerText = currentRound.spotlight + '\n' + '⭐'.repeat(promptList[currentRound.promptType].prompts[currentRound.promptId].rating)
-        if (promptList[currentRound.promptType].prompts[currentRound.promptId].rating < 3) {
-          spotlightContext.innerText = currentRound.spotlightTeaser + ' does not recommend ' + '_____'
-        } else {
-          spotlightContext.innerText = currentRound.spotlightTeaser + ' recommends ' + '_____'
-        }
+        spotlightContext.innerText = currentRound.spotlightTeaser + ' says:'
         spotlightDecor.innerText = currentRound.spotlightTeaser[0]
 
         twemoji.parse(spotlightText)
@@ -2847,8 +1973,8 @@ function setDynamicFrame(currentRound, announcerText) {
 
         spotlightTextElements = document.getElementsByClassName('spotlightTextElement')
 
-        Object.values(spotlightTextElements).forEach(element => {
-          element.remove()
+        Object.keys(spotlightTextElements).forEach(index => {
+          spotlightTextElements[0].remove()
         })
         
         let lines = currentRound.spotlight.split(/\r?\n/)
@@ -2878,7 +2004,7 @@ function setDynamicFrame(currentRound, announcerText) {
 
       }
 
-    } else if (currentRound.segment == 'voting') {
+    } else if (currentRound.segment == 'reveal') {
 
       let packIdOrZero = 0
 
@@ -2899,21 +2025,8 @@ function setDynamicFrame(currentRound, announcerText) {
       } else if (currentRound.promptType == 1) { // Review
 
         spotlightText.innerText = currentRound.spotlight + '\n' + '⭐'.repeat(promptList[currentRound.promptType].prompts[currentRound.promptId].rating)
+        spotlightContext.innerText = '- ' + currentRound.spotlightTeaser
         spotlightDecor.innerText = currentRound.spotlightTeaser[0]
-
-        if (currentRound.responses.length != 0) {
-          if (promptList[currentRound.promptType].prompts[currentRound.promptId].rating < 3) {
-            spotlightContext.innerText = currentRound.spotlightTeaser + ' does not recommend ' + responseList[currentRound.responses[0].pack].responses[currentRound.responses[0].card]
-          } else {
-            spotlightContext.innerText = currentRound.spotlightTeaser + ' recommends ' + responseList[currentRound.responses[0].pack].responses[currentRound.responses[0].card]
-          }
-        } else {
-          if (promptList[currentRound.promptType].prompts[currentRound.promptId].rating < 3) {
-            spotlightContext.innerText = currentRound.spotlightTeaser + ' does not recommend ' + '_____'
-          } else {
-            spotlightContext.innerText = currentRound.spotlightTeaser + ' recommends ' + '_____'
-          }
-        }
 
         twemoji.parse(spotlightText)
 
@@ -2945,7 +2058,7 @@ function setDynamicFrame(currentRound, announcerText) {
     } else if (currentRound.segment == 'lobby') {
 
       dynamicFrame.setAttribute('promptType', 'Standard')
-      dynamicFrameBackground.style.backgroundImage = new URL('/banners/1.png', 'https://localhost:3000')
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/0.png', 'https://localhost:3000')
 
       spotlightText.innerText = currentRound.spotlight
       spotlightContext.innerText = ''
@@ -2955,7 +2068,7 @@ function setDynamicFrame(currentRound, announcerText) {
     } else if (currentRound.segment == 'podium') {
 
       dynamicFrame.setAttribute('promptType', 'Standard')
-      dynamicFrameBackground.style.backgroundImage = new URL('/banners/1.png', 'https://localhost:3000')
+      dynamicFrameBackground.style.backgroundImage = new URL('/banners/0.png', 'https://localhost:3000')
 
       spotlightText.innerText = currentRound.spotlight
       spotlightContext.innerText = ''
