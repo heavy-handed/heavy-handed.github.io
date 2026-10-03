@@ -1,5 +1,5 @@
 //
-
+console.log("meep")
 const minPlayers = 5
 const numPacks = 7 // responseString will break if no. of card packs exceeds 36
 
@@ -49,6 +49,8 @@ async function generateIceServers() {
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
+    } else {
+      console.log("a-okay!")
     }
 
     const data = await response.json();
@@ -1309,7 +1311,7 @@ callButton.onclick = async () => {
 
 
   async function newPeer() {
-
+    console.log("heyo")
     const servers = await generateIceServers();
     let newPc = new RTCPeerConnection(servers);
 
