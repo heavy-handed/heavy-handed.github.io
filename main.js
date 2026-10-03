@@ -1,5 +1,5 @@
 //
-console.log("{ servers }")
+console.log("{ iceServers }")
 const minPlayers = 5
 const numPacks = 7 // responseString will break if no. of card packs exceeds 36
 
@@ -1311,9 +1311,13 @@ callButton.onclick = async () => {
 
 
   async function newPeer() {
-    const servers = await generateIceServers();
-    console.log({ servers })
-    let newPc = new RTCPeerConnection({ servers });
+    const iceServersArray = await generateIceServers();
+    console.log({
+      iceServers: iceServersArray
+    })
+    let newPc = new RTCPeerConnection({
+      iceServers: iceServersArray
+    });
 
     // Create channel to send other (non-media) data
 
@@ -1537,8 +1541,13 @@ joinButton.onclick = async () => {
     // P A R T  2
 
 
-    const servers = await generateIceServers();
-    let newPc = new RTCPeerConnection({ servers });
+    const iceServersArray = await generateIceServers();
+    console.log({
+      iceServers: iceServersArray
+    })
+    let newPc = new RTCPeerConnection({
+      iceServers: iceServersArray
+    });
 
     newPc.onconnectionstatechange = async () => {
 
