@@ -1,5 +1,5 @@
 //
-console.log("meep")
+console.log("mootmoot")
 const minPlayers = 5
 const numPacks = 7 // responseString will break if no. of card packs exceeds 36
 
@@ -49,11 +49,11 @@ async function generateIceServers() {
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
-    } else {
-      console.log("a-okay!")
     }
 
     const data = await response.json();
+
+    console.log(data)
 
     // Filter out port 53 URLs to prevent browser timeouts (as recommended by Cloudflare)
     if (data.iceServers) {
@@ -63,6 +63,8 @@ async function generateIceServers() {
         }
       });
     }
+
+    console.log(data.iceServers)
 
     return data.iceServers;
   } catch (error) {
