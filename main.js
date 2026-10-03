@@ -32,7 +32,45 @@ if (!firebase._apps.length) {
   var db = firestore.getFirestore(app)
 }
 
-const servers = {
+const cloudflareTurnKeyId = "95315ef6f31531f4286329d21bf9ec43"
+const cloudflareTurnApiToken = "4af3ad25600e2eb7ec5a2e5506c92d7a8d689fe6369cd459dc301a29230a25df"
+
+async function generateIceServers() {
+  try {
+    // Make the POST request to Cloudflare's TURN API using native fetch
+    const response = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${cloudflareTurnKeyId}/credentials/generate-ice-servers`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cloudflareTurnApiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ttl: 86400 }) // TTL in seconds (e.g., 24 hours)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Filter out port 53 URLs to prevent browser timeouts (as recommended by Cloudflare)
+    if (data.iceServers) {
+      data.iceServers.forEach(server => {
+        if (server.urls && Array.isArray(server.urls)) {
+          server.urls = server.urls.filter(url => !url.includes(':53'));
+        }
+      });
+    }
+
+    return data.iceServers;
+  } catch (error) {
+    console.error('Failed to generate Cloudflare TURN credentials:', error);
+    // Fallback to a basic public STUN server if the API call fails
+    return [{ urls: ['stun:stun.cloudflare.com:3478'] }];
+  }
+}
+
+/*const servers = {
   iceServers: [
     {
       urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
@@ -44,7 +82,7 @@ const servers = {
     }
   ],
   iceCandidatePoolSize: 10,
-};
+};*/
 
 let callId = null;
 
@@ -1272,6 +1310,7 @@ callButton.onclick = async () => {
 
   async function newPeer() {
 
+    const servers = await generateIceServers();
     let newPc = new RTCPeerConnection(servers);
 
     // Create channel to send other (non-media) data
@@ -1496,7 +1535,7 @@ joinButton.onclick = async () => {
     // P A R T  2
 
 
-
+    const servers = await generateIceServers();
     let newPc = new RTCPeerConnection(servers);
 
     newPc.onconnectionstatechange = async () => {
