@@ -10,26 +10,24 @@
     <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
   </head>
   <body>
-    <h1>¶ heavy-handed</h1>
+    <h1 id="gameTitle">¶ heavy-handed</h1>
 
 
     <div class="" id="preGameFrame">
 
-      <h3 class="i">[ hev-ee-han-did ] • adjective</h3>
-      <p style="margin-bottom: 60px;">clumsy, insensitive, or overly forceful.</p>
+      <h3 id="gameContext" class="i">[ hev-ee-han-did ] • adjective</h3>
+      <p id="gameDescription" style="margin-bottom: 60px;">clumsy, insensitive, or overly forceful</p>
 
       <h3>Join a room</h3>
       
       <div>
         <input id="joinInput" placeholder="room code" autocomplete="off"/>
-        <button id="joinButton">
-          <img class="icon" src="/icons/join.png">
-        </button>
+        <button id="joinButton">join</button>
       </div>
 
       <h3>Create a room</h3>
       
-      <button id="callButton" class="important">Create</button>
+      <button id="callButton" class="important">create</button>
       
     </div>
 
@@ -90,44 +88,48 @@
       <h3>Disconnected</h3>
       <p>You were disconnected from the room</p>
 
-      <button id="dismissButton">
-        <img class="icon" src="/icons/dismiss.png">
-      </button>
+      <button id="dismissButton">dismiss</button>
 
     </div>
     
 
     <div id="infoPanel">
-
-      <div class="banished infoBar" id="playerBar">
-        
-      </div>
-
     
       <div class="infoBar" id="controlBar">
-        <div class="wrapper">
-          <button id="leaveButton" disabled="true">
-            <img class="icon" src="/icons/leave.png">
-          </button>
+
+        <p id="nameText">Name</p>
+        <h1 id="scoreText">0%</h1>
+        <p id="roundsLeftText"></p>
+
+        <div class="infoWrapper">
+          <button id="leaveButton" disabled="true">leave</button>
           <button id="readyButton" disabled="true">
             <img class="icon" src="/icons/ready.png">
           </button>
           <input id="nameInput" disabled="true" placeholder="" autocomplete="off"/>
-          <button id="muteButton">
-            <img class="icon" src="/icons/unmuted.png">
-          </button>
+          <button id="muteButton">mute</button>
         </div>
+
+      </div>
+
+      <div class="banished" id="interactionPanel">
+
+      </div>
+
+      <div class="banished infoBar" id="playerBar">
+        
       </div>
       
     </div>
 
 
-    <button id="playButton" class="important banished">Let's play</button>
+    <button id="playButton" class="important banished">let's play</button>
 
     <div id="notificationPanel"></div>
 
 
     <audio id="successAudio" src="/sounds/success.mp3"></audio>
+    <audio id="alertAudio" src="/sounds/alert.mp3"></audio>
     <audio id="neutralAudio" src="/sounds/neutral.mp3"></audio>
     <audio id="musicAudio" src="/sounds/music/upbeat.mp3" preload="auto"></audio>
 
