@@ -1,5 +1,5 @@
 //
-console.log("mootmoot")
+console.log("{ servers }")
 const minPlayers = 5
 const numPacks = 7 // responseString will break if no. of card packs exceeds 36
 
@@ -52,8 +52,6 @@ async function generateIceServers() {
     }
 
     const data = await response.json();
-
-    console.log(data)
 
     // Filter out port 53 URLs to prevent browser timeouts (as recommended by Cloudflare)
     if (data.iceServers) {
@@ -1313,9 +1311,9 @@ callButton.onclick = async () => {
 
 
   async function newPeer() {
-    console.log("heyo")
     const servers = await generateIceServers();
-    let newPc = new RTCPeerConnection(servers);
+    console.log({ servers })
+    let newPc = new RTCPeerConnection({ servers });
 
     // Create channel to send other (non-media) data
 
@@ -1540,7 +1538,7 @@ joinButton.onclick = async () => {
 
 
     const servers = await generateIceServers();
-    let newPc = new RTCPeerConnection(servers);
+    let newPc = new RTCPeerConnection({ servers });
 
     newPc.onconnectionstatechange = async () => {
 
